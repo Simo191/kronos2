@@ -1,0 +1,229 @@
+.notification-bell-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+// ── Bouton cloche ─────────────────────────────────────────────────────────
+.bell-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  overflow: visible;       //   indispensable pour laisser le badge déborder
+
+  //   Cloche un peu plus grosse + couleur plus visible pour ne pas être confondue
+  //   avec son propre badge.
+  i {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  &:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+  }
+
+  //   Tous les états : aucun outline, aucun ring, aucune bordure.
+  //   Le !important neutralise les règles globales Bootstrap qui forcent
+  //   un focus bleu sur tous les <button>.
+  &,
+  &:focus,
+  &:focus-within,
+  &:focus-visible,
+  &:active,
+  &:visited {
+    outline: 0 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.bell-badge {
+  position: absolute;
+  //   Le badge déborde du coin haut-droit du bouton (style iOS/Facebook).
+  //   La cloche reste complètement visible en dessous.
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px #fff;
+
+  &.badge-danger  { background: #dc3545; animation: bell-pulse 2.2s ease-out infinite; }
+  &.badge-warning { background: #fd7e14; }
+}
+
+//   Halo qui pulse autour du badge — le badge lui-même (et son chiffre)
+//   ne bouge pas, on évite l'effet "clignotement" gênant à la lecture.
+@keyframes bell-pulse {
+  0%   { box-shadow: 0 0 0 2px #fff, 0 0 0 0   rgba(220, 53, 69, 0.55); }
+  70%  { box-shadow: 0 0 0 2px #fff, 0 0 0 8px rgba(220, 53, 69, 0);    }
+  100% { box-shadow: 0 0 0 2px #fff, 0 0 0 0   rgba(220, 53, 69, 0);    }
+}
+
+// ── Dropdown ───────────────────────────────────────────────────────────────
+.notif-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 380px;
+  max-height: 480px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1080;
+  animation: notif-pop 0.15s ease-out;
+}
+
+@keyframes notif-pop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.notif-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: #fafbfc;
+}
+.notif-title {
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+  color: #1e293b;
+  i { color: #6366f1; }
+}
+.notif-counter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px; height: 18px; padding: 0 6px;
+  margin-left: 8px;
+  background: #6366f1; color: #fff;
+  border-radius: 9px;
+  font-size: 10px; font-weight: 700; line-height: 1;
+}
+.notif-refresh {
+  background: transparent; border: none;
+  color: #64748b; cursor: pointer; padding: 4px 8px;
+  border-radius: 5px;
+  transition: background .15s, color .15s;
+  &:hover:not(:disabled) { background: #eef2ff; color: #4338ca; }
+  &:disabled { opacity: .5; cursor: not-allowed; }
+}
+
+.notif-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 0;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+}
+
+// État vide
+.notif-empty {
+  padding: 28px 16px;
+  text-align: center;
+}
+
+// ── Items ──────────────────────────────────────────────────────────────────
+.notif-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background .15s, border-color .15s;
+
+  &:hover { background: #f8fafc; }
+
+  // Bordure gauche colorée selon sévérité (signal visuel rapide)
+  &.notif-warning { border-left-color: #fd7e14; }
+  &.notif-danger  { border-left-color: #dc3545; background: #fff5f5; }
+  &.notif-danger:hover { background: #ffeaea; }
+}
+
+.notif-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 16px;
+
+  .notif-danger & {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+  .notif-warning & {
+    background: #ffedd5;
+    color: #c2410c;
+  }
+}
+
+.notif-content { flex: 1 1 auto; min-width: 0; }
+.notif-line1 {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.notif-title-txt {
+  font-weight: 600;
+  font-size: 13px;
+  color: #1e293b;
+}
+.notif-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+.notif-presta {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 3px;
+  i { color: #94a3b8; }
+}
+
+// Mobile : dropdown pleine largeur
+@media (max-width: 540px) {
+  .notif-dropdown {
+    position: fixed;
+    top: 64px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-height: calc(100vh - 80px);
+  }
+}

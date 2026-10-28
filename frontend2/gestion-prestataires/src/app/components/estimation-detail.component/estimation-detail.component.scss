@@ -1,0 +1,666 @@
+// ✅ CSS POUR TABLEAU MATRICIEL ESTIMATION
+
+// ✅ PAGE WRAPPER — height naturelle, pas de 100vh
+.est-page-wrapper {
+  background-color: #f8f9fa;
+}
+
+// ✅ HEADER STICKY : colle en haut au scroll de la page
+.est-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background-color: #f8f9fa;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+// ✅ ZONE TABLEAU
+.est-table-section {
+  padding-top: 0.75rem;
+}
+
+// ✅ Le scroll est ICI — pas sur la page
+.est-table-card {
+  .est-table-responsive {
+    overflow-x: auto;
+    overflow-y: auto;
+    // max-height calculé dynamiquement via JS → var(--table-max-h)
+    max-height: var(--table-max-h, 60vh);
+
+    &::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 5px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #1e88e5;
+      border-radius: 5px;
+      &:hover { background: #1565c0; }
+    }
+  }
+}
+
+// Compatibilité
+.container-fluid {
+  background-color: #f8f9fa;
+}
+
+
+// En-tête
+.page-title {
+  color: #1e88e5;
+  font-weight: 600;
+}
+
+// Cartes
+.card {
+  border-radius: 8px;
+  
+  .card-header {
+    border-radius: 8px 8px 0 0;
+    padding: 1rem 1.5rem;
+    
+    &.bg-primary {
+      background-color: #1e88e5 !important;
+    }
+    
+    &.bg-success {
+      background-color: #2e7d32 !important;
+    }
+    
+    h5 {
+      font-size: 1.1rem;
+      margin: 0;
+    }
+  }
+}
+
+// ✅ TABLEAU MATRICIEL
+.table-responsive, .est-table-responsive {
+  border-radius: 0 0 8px 8px;
+}
+
+// Barre verte — pas sticky (elle est au-dessus du scroll container)
+.est-table-card > .card-header {
+  position: static;
+}
+
+table {
+  margin-bottom: 0 !important;
+  
+  thead {
+    // sticky top:0 DANS le scroll container .est-table-responsive ✅
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    
+    th {
+      background-color: #f5f5f5 !important;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #424242;
+      border-bottom: 2px solid #e0e0e0 !important;
+      vertical-align: middle;
+      white-space: nowrap;
+      
+      // Première colonne (Prestataire)
+      &:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 11;
+        background-color: #f5f5f5 !important;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.05);
+      }
+      
+      // Colonne TJM
+      &:nth-child(2) {
+        background-color: #e8f5e9 !important;
+      }
+      
+      // Colonne TOTAL
+      &.bg-info-subtle {
+        background-color: #e3f2fd !important;
+        font-weight: 700;
+        color: #1565c0 !important;
+      }
+    }
+  }
+  
+  tbody {
+    tr {
+      transition: background-color 0.2s;
+      
+      &:hover {
+        background-color: #f5f5f5;
+      }
+      
+      // Ligne normale
+      td {
+        vertical-align: middle;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #e0e0e0;
+        
+        // Première colonne sticky
+        &:first-child {
+          position: sticky;
+          left: 0;
+          z-index: 5;
+          background-color: white;
+          box-shadow: 2px 0 4px rgba(0,0,0,0.03);
+          min-width: 200px;
+        }
+        
+        // Colonne TJM
+        &:nth-child(2) {
+          background-color: #f1f8e9;
+          font-weight: 600;
+        }
+        
+        // Colonnes des mois
+        input[type="number"] {
+          border: 1px solid #e0e0e0;
+          border-radius: 4px;
+          text-align: center;
+          transition: all 0.2s;
+          
+          &:focus {
+            border-color: #1e88e5;
+            box-shadow: 0 0 0 2px rgba(30, 136, 229, 0.1);
+            outline: none;
+          }
+          
+          &::placeholder {
+            color: #bdbdbd;
+          }
+        }
+        
+        // Colonne TOTAL
+        &.bg-info-subtle {
+          background-color: #e3f2fd !important;
+          font-weight: 600;
+          
+          .fw-bold {
+            color: #1565c0;
+            font-size: 1rem;
+          }
+          
+          .text-muted {
+            color: #424242 !important;
+            font-size: 0.85rem;
+          }
+        }
+      }
+      
+      // ✅ LIGNE TOTAL GÉNÉRAL
+      &.table-primary {
+        background-color: #bbdefb !important;
+        font-weight: 700;
+        position: sticky;
+        bottom: 0;
+        z-index: 8;
+        box-shadow: 0 -2px 6px rgba(0,0,0,0.1);
+        
+        td {
+          background-color: #bbdefb !important;
+          border: 1px solid #90caf9 !important;
+          color: #0d47a1;
+          font-size: 0.9rem;
+          padding: 0.75rem;
+          
+          &:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 9;
+            background-color: #bbdefb !important;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
+          &.bg-primary {
+            background-color: #1e88e5 !important;
+            color: white !important;
+            font-size: 1rem;
+            
+            .fs-6 {
+              font-size: 1.1rem !important;
+              font-weight: 700;
+            }
+          }
+          
+          div {
+            margin: 2px 0;
+            
+            &.small {
+              font-size: 0.8rem;
+              font-weight: 500;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Toggle prestataire existant/futur
+.form-check-switch {
+  .form-check-input {
+    width: 40px;
+    height: 20px;
+    cursor: pointer;
+    
+    &:checked {
+      background-color: #1e88e5;
+      border-color: #1e88e5;
+    }
+    
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.15);
+      border-color: #1e88e5;
+    }
+  }
+}
+
+// Select prestataire
+select.form-select-sm {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  
+  &:focus {
+    border-color: #1e88e5;
+    box-shadow: 0 0 0 2px rgba(30, 136, 229, 0.1);
+  }
+}
+
+// Input futur prestataire
+input[type="text"].form-control-sm {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  
+  &:focus {
+    border-color: #ff9800;
+    box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.1);
+  }
+  
+  &::placeholder {
+    color: #bdbdbd;
+    font-style: italic;
+  }
+}
+
+// Bouton supprimer
+.btn-outline-danger {
+  border-color: #f44336;
+  color: #f44336;
+  
+  &:hover {
+    background-color: #f44336;
+    color: white;
+  }
+}
+
+// Bouton ajouter prestataire
+.btn-success {
+  background-color: #2e7d32;
+  border-color: #2e7d32;
+  
+  &:hover {
+    background-color: #1b5e20;
+    border-color: #1b5e20;
+  }
+}
+
+// Alerts budgets
+.alert {
+  border-radius: 6px;
+  font-size: 0.9rem;
+  
+  strong {
+    font-weight: 600;
+  }
+  
+  &.alert-info {
+    background-color: #e3f2fd;
+    border-color: #90caf9;
+    color: #0d47a1;
+  }
+  
+  &.alert-success {
+    background-color: #e8f5e9;
+    border-color: #81c784;
+    color: #1b5e20;
+  }
+  
+  &.alert-warning {
+    background-color: #fff3e0;
+    border-color: #ffb74d;
+    color: #e65100;
+  }
+}
+
+// Notifications
+.alert-dismissible {
+  animation: slideInRight 0.3s ease-out;
+  
+  .btn-close {
+    padding: 0.75rem;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+// Responsive
+@media (max-width: 1400px) {
+  table {
+    thead th {
+      font-size: 0.75rem;
+      padding: 0.4rem 0.5rem;
+    }
+    
+    tbody td {
+      padding: 0.4rem 0.5rem;
+      
+      input[type="number"] {
+        font-size: 0.8rem;
+        width: 50px !important;
+      }
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .card-header h5 {
+    font-size: 0.95rem;
+  }
+  
+  table {
+    font-size: 0.8rem;
+    
+    thead th {
+      font-size: 0.7rem;
+    }
+  }
+}
+
+// Style des cellules vides
+input[type="number"]:placeholder-shown {
+  background-color: #fafafa;
+}
+
+// Effet focus sur cellule
+td:has(input:focus) {
+  background-color: #e8f4fd !important;
+}
+
+// Badge TJM
+.badge {
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}
+
+// Bordures propres
+.table-bordered {
+  border: 1px solid #e0e0e0;
+  
+  td, th {
+    border-color: #e0e0e0 !important;
+  }
+}
+
+// État hover sur ligne
+tbody tr:hover td:first-child {
+  background-color: #f5f5f5;
+}
+
+// Total column emphasis
+.bg-info-subtle {
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, #1e88e5, #1565c0);
+  }
+}
+// ✅ MODAL D'ATTENTE
+.modal-overlay-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .modal-loading-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2.5rem 3rem;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    min-width: 280px;
+    animation: fadeInScale 0.2s ease;
+  }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+// ========== DRAG & DROP LIGNES ESTIMATION ==========
+.est-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  margin: 0 auto;
+  color: #cbd5e1;
+  font-size: 16px;
+  cursor: grab;
+  transition: color 0.15s;
+  user-select: none;
+
+  &:hover { color: #2563eb; }
+  &:active { cursor: grabbing; color: #1d4ed8; }
+}
+
+tr.est-dragging {
+  opacity: 0.4;
+  td { background: #f8fafc !important; }
+}
+
+tr.est-drag-over {
+  td { background: #eff6ff !important; }
+  td:first-child { border-left: 3px solid #2563eb !important; }
+}
+
+// ========== RÉSUMÉ COLLAPSÉ HEADER ==========
+.est-summary-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+
+  .est-summary-label {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .est-summary-value {
+    font-size: 1rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+}
+
+.est-summary-sep {
+  width: 1px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.3);
+}
+// ========== DRAG & DROP LIGNES ESTIMATION ==========
+.est-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  margin: 0 auto;
+  color: #cbd5e1;
+  font-size: 16px;
+  cursor: grab;
+  transition: color 0.15s;
+  user-select: none;
+  &:hover { color: #2563eb; }
+  &:active { cursor: grabbing; }
+}
+
+tr.est-dragging {
+  opacity: 0.4;
+  td { background: #f8fafc !important; }
+}
+
+tr.est-drag-over {
+  td { background: #eff6ff !important; }
+  td:first-child { border-left: 3px solid #2563eb !important; }
+}
+
+// ========== RÉSUMÉ COLLAPSÉ HEADER ==========
+.est-summary-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+
+  .est-summary-label {
+    font-size: 0.68rem;
+    opacity: 0.85;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .est-summary-value {
+    font-size: 1rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+}
+
+.est-summary-sep {
+  width: 1px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+// ========== RESPONSIVE MOBILE (ajout) ==========
+
+@media (max-width: 768px) {
+
+  .est-page-wrapper {
+    padding: 6px !important;
+  }
+
+  // Header sticky : réduit
+  .est-sticky-header {
+    padding: 6px 8px !important;
+  }
+
+  .est-header-title {
+    font-size: 14px !important;
+  }
+
+  .est-header-actions {
+    flex-wrap: wrap;
+    gap: 4px !important;
+
+    .btn {
+      font-size: 11px !important;
+      padding: 4px 8px !important;
+    }
+  }
+
+  // Infos générales : 1 colonne
+  .card-body .row > div[class*="col-"] {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+
+  // Tableau matriciel : scroll horizontal obligatoire
+  .table-responsive, .est-table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 500px;
+    font-size: 0.75rem;
+
+    thead th {
+      font-size: 0.7rem !important;
+      padding: 0.3rem 0.4rem !important;
+    }
+
+    tbody td {
+      padding: 0.3rem 0.4rem !important;
+
+      input[type="number"] {
+        width: 44px !important;
+        font-size: 0.75rem !important;
+        padding: 2px 4px !important;
+      }
+    }
+  }
+
+  // Badges résumé collapse
+  .est-summary-badge {
+    font-size: 11px !important;
+    padding: 0 6px !important;
+  }
+
+  .modal-dialog {
+    margin: 0.25rem !important;
+    max-width: calc(100vw - 0.5rem) !important;
+  }
+
+  .modal-body {
+    padding: 0.75rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+
+  table {
+    min-width: 420px;
+    font-size: 0.7rem;
+  }
+
+  .est-header-title {
+    font-size: 12px !important;
+  }
+}

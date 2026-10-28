@@ -1,0 +1,857 @@
+<div class="container-fluid px-4 py-4">
+  
+  <!-- EN-TÊTE -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1">
+        <i class="bi bi-file-earmark-text-fill me-2 text-primary"></i>Gestion des Contrats
+      </h1>
+      <p class="text-muted mb-0">Gérez vos contrats et leurs informations</p>
+    </div>
+    <div class="d-flex gap-2">
+      <div class="btn-group" role="group">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          [class.active]="viewMode === 'list'"
+          (click)="toggleViewMode('list')">
+          <i class="bi bi-list-ul"></i> Liste
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          [class.active]="viewMode === 'cards'"
+          (click)="toggleViewMode('cards')">
+          <i class="bi bi-grid-3x3-gap-fill"></i> Cartes
+        </button>
+      </div>
+      <button *hasPermission="Permission.MANAGE_CONTRATS" class="btn btn-primary px-4" (click)="openModal()">
+        <i class="bi bi-plus-lg me-2"></i>Nouveau Contrat
+      </button>
+    </div>
+  </div>
+
+  <!-- CARTES STATISTIQUES -->
+  <div class="row g-3 mb-4">
+    <div class="col-lg-4 col-md-6 col-12">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-primary-subtle">
+              <i class="bi bi-file-earmark-text text-primary"></i>
+            </div>
+            <div class="ms-3">
+              <h3 class="mb-0 fw-bold">{{ totalContrats }}</h3>
+              <p class="text-muted mb-0 small">TOTAL CONTRATS</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4 col-md-6 col-12">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-success-subtle">
+              <i class="bi bi-check-circle text-success"></i>
+            </div>
+            <div class="ms-3">
+              <h3 class="mb-0 fw-bold">{{ contratsActifs }}</h3>
+              <p class="text-muted mb-0 small">CONTRATS ACTIFS</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div *hasPermission="Permission.VIEW_TAUX_JOURNALIER" class="col-lg-4 col-md-12 col-12">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-warning-subtle">
+              <i class="bi bi-currency-euro text-warning"></i>
+            </div>
+            <div class="ms-3 flex-grow-1">
+              <h3 class="mb-0 fw-bold">{{ tjmMoyen | formatMontant }}</h3>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <p class="text-muted mb-0 small">TJM MOYEN</p>
+                <span class="text-muted small">|</span>
+                <span class="badge bg-success-subtle text-success px-2 py-1" style="font-size: 0.7rem;">
+                  <i class="bi bi-arrow-up-circle me-1"></i>{{ tjmMax | formatMontant }}
+                </span>
+                <span class="badge bg-danger-subtle text-danger px-2 py-1" style="font-size: 0.7rem;">
+                  <i class="bi bi-arrow-down-circle me-1"></i>{{ tjmMin | formatMontant }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <!-- ✅ Système de notifications centralisé -->
+  <app-notification-toast></app-notification-toast>
+
+
+  <!-- TABLEAU/CARTES -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      
+      <!-- BARRE DE FILTRES -->
+      <div *hasPermission="Permission.MANAGE_CONTRATS" class="p-3 border-bottom bg-light">
+        <div class="row g-3 align-items-center">
+          <div class="col-lg-4 col-md-6 col-12">
+            <div class="input-group">
+              <span class="input-group-text bg-white border-end-0">
+                <i class="bi bi-search text-muted"></i>
+              </span>
+              <input 
+                type="text" 
+                class="form-control border-start-0 ps-0" 
+                placeholder="Rechercher un prestataire..."
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="applyFilters()">
+            </div>
+          </div>
+          <div class="col-lg-2 col-md-6 col-12">
+            <select class="form-select" [(ngModel)]="filterPrestataire" (ngModelChange)="applyFilters()">
+              <option value="">Tous les prestataires</option>
+              @for (p of prestataires; track p.id) {
+                <option [value]="p.id">{{ p.nom }} {{ p.prenom }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-lg-2 col-md-4 col-12">
+            <select class="form-select" [(ngModel)]="filterTypeContrat" (ngModelChange)="applyFilters()">
+              <option value="">Tous les types</option>
+              @for (type of typesContrat; track type.id) {
+                <option [value]="type.id">{{ type.libelle }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-lg-2 col-md-4 col-12">
+            <select class="form-select" [(ngModel)]="filterStatut" (ngModelChange)="applyFilters()">
+              <option value="">Tous les statuts</option>
+              <option value="actif">Actifs</option>
+              <option value="termine">Terminés</option>
+            </select>
+          </div>
+          <div class="col-lg-2 col-md-4 col-12">
+            <div class="input-group">
+              <select class="form-select" [(ngModel)]="sortColumn" (ngModelChange)="onSortChange()">
+                <option value="">Trier par...</option>
+                <option value="prestataire">Prestataire</option>
+                <option value="type">Type</option>
+                <option value="dateDebut">Date début</option>
+                <option value="dateFin">Date fin</option>
+                <option value="tjm">TJM</option>
+                <option value="nombreJours">Jours contrat</option>
+                <option value="joursRestants">Jours restants</option>
+                <option value="statut">Statut</option>
+              </select>
+              <button class="btn btn-outline-secondary" (click)="toggleSortDirection()" type="button">
+                <i class="bi" [class.bi-sort-down]="sortDirection === 'asc'" [class.bi-sort-up]="sortDirection === 'desc'"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOADER -->
+      @if (isLoading) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+        </div>
+      } @else {
+        
+        @if (viewMode === 'list') {
+          <!-- VUE LISTE -->
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="px-2 py-3 text-uppercase small fw-semibold text-muted">Prestataire</th>
+                  <th class="px-2 py-3 text-uppercase small fw-semibold text-muted">Type</th>
+                  <th class="px-3 py-3 text-uppercase small fw-semibold text-muted">Début</th>
+                  <th class="px-3 py-3 text-uppercase small fw-semibold text-muted">Fin</th>
+                  <th *hasPermission="Permission.VIEW_TAUX_JOURNALIER" class="px-3 py-3 text-uppercase small fw-semibold text-muted">TJM</th>
+                  <th class="px-3 py-3 text-uppercase small fw-semibold text-muted">J.contrat</th>
+                  <th class="px-3 py-3 text-uppercase small fw-semibold text-muted">Utilisés / Restants</th>
+                  <th class="px-3 py-3 text-uppercase small fw-semibold text-muted">Statut</th>
+                  <th *hasPermission="Permission.MANAGE_CONTRATS" class="px-2 py-3 text-uppercase small fw-semibold text-muted text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (contrat of pagedContrats; track contrat.id) {
+                  <tr [class.row-warning]="getContratAlertStatus(contrat) === 'warning'"
+                      [class.row-danger]="getContratAlertStatus(contrat) === 'danger'"
+                      [class.row-inactive]="getContratAlertStatus(contrat) === 'inactive'">
+                    <td class="px-2 py-3">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-circle me-2">
+                          {{ getInitials(contrat.prestataire?.nom, contrat.prestataire?.prenom) }}
+                        </div>
+                        <div>
+                          <div class="fw-semibold">{{ contrat.prestataire?.nom || 'N/A' }} {{ contrat.prestataire?.prenom || '' }}</div>
+                          <!-- <small class="text-muted">ID: {{ contrat.id?.substring(0, 8) }}...</small> -->
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-2 py-3">
+                      <span class="badge bg-info text-white">{{ contrat.typeContrat?.nom || contrat.typeContrat?.libelle || 'N/A' }}</span>
+                    </td>
+                    <td class="px-2 py-3">
+                      <i class="bi bi-calendar3 me-2 text-muted"></i>
+                      {{ formatDate(contrat.dateDebut) }}
+                    </td>
+                    <td class="px-2 py-3">
+                      @if (contrat.dateFin) {
+                        <i class="bi bi-calendar-x me-2 text-muted"></i>
+                        {{ formatDate(contrat.dateFin) }}
+                      } @else {
+                        <span class="text-muted">-</span>
+                      }
+                    </td>
+                    <td *hasPermission="Permission.VIEW_TAUX_JOURNALIER" class="px-3 py-3">
+                      <span class="badge bg-success text-white px-3 py-2">{{ contrat.tjm | formatMontant }}/j</span>
+                    </td>
+                    <td class="px-3 py-3">
+                      <span class="badge bg-primary-subtle text-primary px-3 py-2">
+                        {{ (contrat.nombreJours) }}j
+                      </span>
+                    </td>
+                    <td class="px-3 py-3">
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-warning-subtle text-warning px-3 py-2">
+                          <i class="bi bi-hourglass-split me-1"></i>{{ getJoursUtilises(contrat) }}j
+                        </span>
+                        <span class="text-muted">/</span>
+                        <span class="badge bg-success-subtle text-success px-3 py-2">
+                          <i class="bi bi-check-circle me-1"></i>{{ getJoursRestants(contrat) }}j
+                        </span>
+                      </div>
+                    </td>
+                    <td class="px-3 py-3">
+                      @if (getContratAlertStatus(contrat) === 'success') {
+                        <span class="badge bg-success-subtle text-success px-3 py-2">
+                          <i class="bi bi-check-circle me-1"></i>Actif
+                        </span>
+                      } @else if (getContratAlertStatus(contrat) === 'warning') {
+                        <span class="badge px-3 py-2 badge-warning-custom">
+                          <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ getJoursRestants(contrat) }}j restants
+                        </span>
+                      } @else if (getContratAlertStatus(contrat) === 'danger') {
+                        <span class="badge px-3 py-2 badge-danger-custom">
+                          <i class="bi bi-x-circle-fill me-1"></i>
+                          {{ getJoursRestants(contrat) <= 0 ? 'Quota épuisé' : 'Expiré' }}
+                        </span>
+                      } @else {
+                        <span class="badge bg-secondary-subtle text-secondary px-3 py-2">
+                          <i class="bi bi-pause-circle me-1"></i>Inactif
+                        </span>
+                      }
+                    </td>
+                    <td *hasPermission="Permission.MANAGE_CONTRATS" class="px-2 py-3 text-end">
+                      <div class="d-flex align-items-center justify-content-end gap-2">
+                        <!-- ✅ ICÔNE DOCUMENT -->
+                        <button class="btn btn-sm btn-icon-doc" 
+                                [title]="contrat.documentUrl ? 'Ouvrir le document' : 'Aucun document'"
+                                (click)="contrat.documentUrl ? ouvrirDocument(contrat) : null"
+                                [class.has-doc]="contrat.documentUrl"
+                                [class.no-doc]="!contrat.documentUrl"
+                                [disabled]="!contrat.documentUrl">
+                          <i class="bi" [class.bi-file-earmark-check-fill]="contrat.documentUrl" 
+                             [class.bi-file-earmark-x]="!contrat.documentUrl"></i>
+                        </button>
+                        <div class="dropdown">
+                          <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                              <a class="dropdown-item" href="#" (click)="$event.preventDefault(); openModal(contrat)">
+                                <i class="bi bi-pencil text-primary me-2"></i>Modifier
+                              </a>
+                            </li>
+                            <li>
+                              <a class="dropdown-item" href="#" (click)="$event.preventDefault(); toggleContratActive(contrat)">
+                                <i class="bi me-2"
+                                   [class.bi-toggle-on]="contrat.active ?? true"
+                                   [class.bi-toggle-off]="!(contrat.active ?? true)"
+                                   [class.text-success]="contrat.active ?? true"
+                                   [class.text-muted]="!(contrat.active ?? true)"></i>
+                                {{ (contrat.active ?? true) ? 'Désactiver' : 'Activer' }}
+                              </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                              <a class="dropdown-item text-danger" href="#" (click)="$event.preventDefault(); confirmDelete(contrat)">
+                                <i class="bi bi-trash me-2"></i>Supprimer
+                              </a>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="9" class="text-center py-5">
+                      <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                      <p class="text-muted">Aucun contrat trouvé</p>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <!-- VUE CARTES -->
+          <div class="p-3">
+            <div class="row g-2">
+              @for (contrat of pagedContrats; track contrat.id) {
+                <div class="col-lg-4 col-md-6 col-12">
+                  <div class="card border-0 shadow-sm h-100 contract-card"
+                       [class.card-warning]="getContratAlertStatus(contrat) === 'warning'"
+                       [class.card-danger]="getContratAlertStatus(contrat) === 'danger'"
+                       [class.card-inactive]="getContratAlertStatus(contrat) === 'inactive'">
+                    <div class="card-body p-3">
+                      <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="d-flex align-items-center">
+                          <!-- ✅ Avatar image ou initiales — même taille que prestataires -->
+                          <div class="contrat-avatar-wrap me-2">
+                            @if (getAvatarUrl(contrat.prestataire?.imageUrl)) {
+                              <img [src]="getAvatarUrl(contrat.prestataire?.imageUrl)!"
+                                   class="contrat-avatar-img"
+                                   [alt]="contrat.prestataire?.prenom"
+                                   (error)="contrat.prestataire!.imageUrl = undefined">
+                            } @else {
+                              <div class="avatar-circle">
+                                {{ getInitials(contrat.prestataire?.nom, contrat.prestataire?.prenom) }}
+                              </div>
+                            }
+                          </div>
+                          <div>
+                            <h6 class="mb-0 fw-bold">{{ contrat.prestataire?.nom || 'N/A' }} {{ contrat.prestataire?.prenom || '' }}</h6>
+                            <span class="badge bg-info text-white">{{ contrat.typeContrat?.nom || contrat.typeContrat?.libelle || 'N/A' }}</span>
+                          </div>
+                        </div>
+                        <div *hasPermission="Permission.MANAGE_CONTRATS" class="dropdown">
+                          <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                              <a class="dropdown-item" href="#" (click)="$event.preventDefault(); openModal(contrat)">
+                                <i class="bi bi-pencil text-primary me-2"></i>Modifier
+                              </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                              <a class="dropdown-item text-danger" href="#" (click)="$event.preventDefault(); confirmDelete(contrat)">
+                                <i class="bi bi-trash me-2"></i>Supprimer
+                              </a>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      <!-- ✅ STATUT + DOCUMENT -->
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        @if (getContratAlertStatus(contrat) === 'success') {
+                          <span class="badge bg-success-subtle text-success px-2 py-1">
+                            <i class="bi bi-check-circle me-1"></i>Actif
+                          </span>
+                        } @else if (getContratAlertStatus(contrat) === 'warning') {
+                          <span class="badge badge-warning-custom px-2 py-1">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ getJoursRestants(contrat) }}j restants
+                          </span>
+                        } @else if (getContratAlertStatus(contrat) === 'danger') {
+                          <span class="badge badge-danger-custom px-2 py-1">
+                            <i class="bi bi-x-circle-fill me-1"></i>
+                            {{ getJoursRestants(contrat) <= 0 ? 'Quota épuisé' : 'Expiré' }}
+                          </span>
+                        } @else {
+                          <span class="badge bg-secondary-subtle text-secondary px-2 py-1">
+                            <i class="bi bi-pause-circle me-1"></i>Inactif
+                          </span>
+                        }
+
+                        <!-- Icône document -->
+                        <button *hasPermission="Permission.MANAGE_CONTRATS" class="btn btn-sm btn-icon-doc"
+                                [title]="contrat.documentUrl ? 'Ouvrir le document' : 'Aucun document'"
+                                (click)="contrat.documentUrl ? ouvrirDocument(contrat) : null"
+                                [class.has-doc]="contrat.documentUrl"
+                                [class.no-doc]="!contrat.documentUrl"
+                                [disabled]="!contrat.documentUrl">
+                          <i class="bi me-1"
+                             [class.bi-file-earmark-check-fill]="contrat.documentUrl"
+                             [class.bi-file-earmark-x]="!contrat.documentUrl"></i>
+                          <span class="small">{{ contrat.documentUrl ? 'Document' : 'Sans doc' }}</span>
+                        </button>
+                      </div>
+
+                      <!-- Dates + TJM compacts -->
+                      <div class="mb-2">
+                        <div class="d-flex justify-content-between mb-1">
+                          <span class="text-muted small">Date Début</span>
+                          <span class="fw-semibold small">{{ formatDate(contrat.dateDebut) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                          <span class="text-muted small">Date Fin</span>
+                          @if (contrat.dateFin) {
+                            <span class="fw-semibold small">{{ formatDate(contrat.dateFin) }}</span>
+                          } @else {
+                            <span class="text-muted small">-</span>
+                          }
+                        </div>
+                        <div *hasPermission="Permission.VIEW_TAUX_JOURNALIER" class="d-flex justify-content-between">
+                          <span class="text-muted small">Taux Journalier</span>
+                          <span class="fw-bold text-success small">{{ contrat.tjm }}€/jour</span>
+                        </div>
+                      </div>
+
+                      <!-- Jours compacts -->
+                      <div class="p-2 bg-light rounded">
+                        <div class="d-flex justify-content-between mb-1">
+                          <span class="text-muted small">Jours Contrat</span>
+                          <span class="badge bg-primary-subtle text-primary">{{ contrat.nombreJours }}j</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                          <span class="text-muted small"><i class="bi bi-hourglass-split me-1"></i>Utilisés</span>
+                          <span class="badge bg-warning-subtle text-warning">{{ getJoursUtilises(contrat) }}j</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                          <span class="text-muted small"><i class="bi bi-check-circle me-1"></i>Restants</span>
+                          <span class="badge bg-success-subtle text-success fw-bold">{{ getJoursRestants(contrat) }}j</span>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <div class="col-12">
+                  <div class="text-center py-5">
+                    <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                    <p class="text-muted">Aucun contrat trouvé</p>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- PAGINATION AMÉLIORÉE -->
+        @if (filteredContrats.length > pageSize) {
+          <div class="p-3 border-top bg-light">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+              <!-- Info pagination -->
+              <div class="d-flex align-items-center gap-3">
+                <small class="text-muted">
+                  Affichage de <strong>{{ startItemIndex }}</strong> à <strong>{{ endItemIndex }}</strong> sur <strong>{{ filteredContrats.length }}</strong> contrats
+                </small>
+                
+                <!-- Sélecteur taille de page -->
+                <div class="d-flex align-items-center gap-2">
+                  <small class="text-muted">Afficher:</small>
+                  <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="pageSize" (change)="currentPage = 1">
+                    <option [value]="5">5</option>
+                    <option [value]="10">10</option>
+                    <option [value]="20">20</option>
+                    <option [value]="50">50</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Contrôles pagination -->
+              <nav>
+                <ul class="pagination pagination-sm mb-0">
+                  <!-- Première page -->
+                  <li class="page-item" [class.disabled]="currentPage === 1">
+                    <button class="page-link" (click)="goToPage(1)" [disabled]="currentPage === 1">
+                      <i class="bi bi-chevron-double-left"></i>
+                    </button>
+                  </li>
+                  
+                  <!-- Page précédente -->
+                  <li class="page-item" [class.disabled]="currentPage === 1">
+                    <button class="page-link" (click)="prevPage()" [disabled]="currentPage === 1">
+                      <i class="bi bi-chevron-left"></i>
+                    </button>
+                  </li>
+
+                  <!-- Numéros de pages (affichage intelligent) -->
+                  @if (totalPages <= 7) {
+                    <!-- Si peu de pages, afficher toutes -->
+                    @for (page of pageNumbers; track page) {
+                      <li class="page-item" [class.active]="page === currentPage">
+                        <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+                      </li>
+                    }
+                  } @else {
+                    <!-- Si beaucoup de pages, affichage intelligent -->
+                    @if (currentPage <= 3) {
+                      <!-- Début: 1 2 3 4 ... last -->
+                      @for (page of [1, 2, 3, 4]; track page) {
+                        <li class="page-item" [class.active]="page === currentPage">
+                          <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+                        </li>
+                      }
+                      <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                      </li>
+                      <li class="page-item">
+                        <button class="page-link" (click)="goToPage(totalPages)">{{ totalPages }}</button>
+                      </li>
+                    } @else if (currentPage >= totalPages - 2) {
+                      <!-- Fin: 1 ... last-3 last-2 last-1 last -->
+                      <li class="page-item">
+                        <button class="page-link" (click)="goToPage(1)">1</button>
+                      </li>
+                      <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                      </li>
+                      @for (page of [totalPages - 3, totalPages - 2, totalPages - 1, totalPages]; track page) {
+                        <li class="page-item" [class.active]="page === currentPage">
+                          <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+                        </li>
+                      }
+                    } @else {
+                      <!-- Milieu: 1 ... current-1 current current+1 ... last -->
+                      <li class="page-item">
+                        <button class="page-link" (click)="goToPage(1)">1</button>
+                      </li>
+                      <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                      </li>
+                      @for (page of [currentPage - 1, currentPage, currentPage + 1]; track page) {
+                        <li class="page-item" [class.active]="page === currentPage">
+                          <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+                        </li>
+                      }
+                      <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                      </li>
+                      <li class="page-item">
+                        <button class="page-link" (click)="goToPage(totalPages)">{{ totalPages }}</button>
+                      </li>
+                    }
+                  }
+
+                  <!-- Page suivante -->
+                  <li class="page-item" [class.disabled]="currentPage === totalPages">
+                    <button class="page-link" (click)="nextPage()" [disabled]="currentPage === totalPages">
+                      <i class="bi bi-chevron-right"></i>
+                    </button>
+                  </li>
+                  
+                  <!-- Dernière page -->
+                  <li class="page-item" [class.disabled]="currentPage === totalPages">
+                    <button class="page-link" (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages">
+                      <i class="bi bi-chevron-double-right"></i>
+                    </button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+@if (isModalOpen) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-file-earmark-text me-2"></i>
+            {{ isEditMode ? 'Modifier' : 'Nouveau' }} Contrat
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Prestataire <span class="text-danger">*</span></label>
+              <select class="form-select" [(ngModel)]="selectedContrat.prestataireId" name="prestataireId" required>
+                <option [value]="undefined">-- Sélectionner un prestataire --</option>
+                @for (p of prestataires; track p.id) {
+                  <option [value]="p.id">{{ p.nom }} {{ p.prenom }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Type de Contrat <span class="text-danger">*</span></label>
+              <select class="form-select" [(ngModel)]="selectedContrat.typeContratId" name="typeContratId" required>
+                <option [value]="undefined">-- Sélectionner un type --</option>
+                @for (type of typesContrat; track type.id) {
+                  <option [value]="type.id">{{ type.libelle }}</option>
+                }
+              </select>
+            </div>
+</div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Date Début <span class="text-danger">*</span></label>
+                <input type="date" 
+                       class="form-control" 
+                       [(ngModel)]="selectedContrat.dateDebut" 
+                       (ngModelChange)="onDateChange()"
+                       name="dateDebut" 
+                       required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Date Fin <span class="text-danger">*</span></label>
+                <input type="date" 
+                       class="form-control" 
+                       [(ngModel)]="selectedContrat.dateFin" 
+                       (ngModelChange)="onDateChange()"
+                       name="dateFin"
+                       required>
+                <small class="text-muted">Obligatoire pour calcul automatique des jours ouvrés</small>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Taux Journalier (€) <span class="text-danger">*</span></label>
+                <input type="number" 
+                       class="form-control" 
+                       [(ngModel)]="selectedContrat.tjm" 
+                       (ngModelChange)="onTjmChange()"
+                       name="tjm" 
+                       min="0" 
+                       step="0.01" 
+                       required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Montant Contrat (€) <span class="text-danger">*</span></label>
+                <input type="number"
+                       class="form-control"
+                       [(ngModel)]="selectedContrat.montantTotal"
+                       (ngModelChange)="onMontantTotalChange()"
+                       name="montantTotal"
+                       min="0"
+                       step="1"
+                       required>
+                <small class="text-muted">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Le nombre de jours sera calculé automatiquement (Montant ÷ TJM)
+                </small>
+              </div>
+            </div>
+
+            <!-- ─── Congés Payés ──────────────────────────────────────────── -->
+            <!-- @if (joursOuvresBruts > 0) {
+              <div class="mb-3 p-3 rounded border border-info-subtle bg-info-subtle">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <label class="form-label fw-semibold mb-0">
+                    <i class="bi bi-umbrella-fill me-2 text-info"></i>Congés Payés (CP)
+                  </label>
+                  <span class="badge bg-info text-white" style="font-size:11px;">
+                    Pro-rata auto : {{ cpProRataAuto | number:'1.0-1' }}j
+                    <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-white text-decoration-underline"
+                            (click)="applyProRataCP()" title="Appliquer le pro-rata calculé automatiquement">
+                      Appliquer
+                    </button>
+                  </span>
+                </div>
+
+                <input type="number"
+                       class="form-control"
+                       [(ngModel)]="congesCP"
+                       (ngModelChange)="onCongesCPChange()"
+                       name="congesCP"
+                       min="0"
+                       step="0.5"
+                       placeholder="Ex: 12.5">
+
+                <small class="text-muted d-block mt-1">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Laisser à 0 pour ne pas déduire de CP. Le pro-rata est calculé sur la base de 25 CP/an.
+                </small>
+
+                
+                <div class="mt-2 p-2 bg-white rounded border d-flex gap-3 flex-wrap align-items-center" style="font-size:13px;">
+                  <span>
+                    <i class="bi bi-calendar-check text-primary me-1"></i>
+                    Ouvrés bruts : <strong>{{ joursOuvresBruts }}j</strong>
+                  </span>
+                  <span class="text-muted">−</span>
+                  <span>
+                    <i class="bi bi-umbrella text-warning me-1"></i>
+                    CP : <strong class="text-warning">{{ congesCP | number:'1.0-1' }}j</strong>
+                  </span>
+                  <span class="text-muted">=</span>
+                  <span>
+                    <i class="bi bi-check-circle-fill text-success me-1"></i>
+                    <strong class="text-success">{{ selectedContrat.nombreJours }}j</strong> net
+                  </span>
+                  <span class="text-muted ms-auto" style="font-size:11px;">
+                    Montant : <strong>{{ (selectedContrat.montantTotal || 0) | number:'1.0-0' }} €</strong>
+                  </span>
+                </div>
+              </div>
+            } -->
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">
+                Nombre de jours total (contrat) 
+                <span class="badge bg-success ms-2">Automatique</span>
+              </label>
+              <input type="number"
+                     class="form-control bg-light"
+                     [(ngModel)]="selectedContrat.nombreJours"
+                     name="nombreJours"
+                     readonly>
+              <small class="text-success">
+                <i class="bi bi-info-circle me-1"></i>
+                @if ((selectedContrat.montantTotal || 0) > 0 && (selectedContrat.tjm || 0) > 0) {
+                  {{ selectedContrat.montantTotal }} € ÷ {{ selectedContrat.tjm }} € = <strong>{{ selectedContrat.nombreJours }}j</strong>
+                } @else {
+                  Calculé automatiquement depuis le Montant Contrat ÷ Taux Journalier
+                }
+              </small>
+            </div>
+
+            <!-- ✅ NOUVEAU : SEUIL MENSUEL -->
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">
+                Seuil mensuel (jours/mois)
+                <span class="badge bg-info ms-2">Optionnel</span>
+              </label>
+              <input type="number"
+                     class="form-control"
+                     [(ngModel)]="selectedContrat.seuilJoursMois"
+                     name="seuilJoursMois"
+                     min="0"
+                     step="0.5"
+                     placeholder="Ex: 20">
+              <small class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>
+                Nombre maximum de jours travaillés autorisés par mois. Laisser vide pour aucune limite.
+              </small>
+            </div>
+</div>  
+            <!-- ✅ NOUVEAU : Activer / Désactiver le contrat -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Statut du contrat</label>
+              <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
+                <div>
+                  @if (selectedContrat.active ?? true) {
+                    <span class="badge bg-success-subtle text-success px-3 py-2">
+                      <i class="bi bi-check-circle-fill me-1"></i>Contrat actif
+                    </span>
+                    <div class="text-muted small mt-1">Pris en compte lors de la génération des jours travaillés.</div>
+                  } @else {
+                    <span class="badge bg-secondary-subtle text-secondary px-3 py-2">
+                      <i class="bi bi-pause-circle-fill me-1"></i>Contrat inactif
+                    </span>
+                    <div class="text-muted small mt-1">Ignoré lors de la génération.</div>
+                  }
+                </div>
+                <div class="form-check form-switch ms-3 mb-0">
+                  <input class="form-check-input" type="checkbox" id="contratActive"
+                         [(ngModel)]="selectedContrat.active" name="active"
+                         style="width: 2.5em; height: 1.3em;">
+                </div>
+              </div>
+            </div>
+
+            <!-- ✅ DOCUMENT DU CONTRAT -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-paperclip me-1"></i>Document du contrat
+                <span class="badge bg-secondary ms-2">Optionnel</span>
+              </label>
+
+              <div class="doc-upload-row">
+
+                <!-- Bouton "Voir" si document existant -->
+                @if (selectedContrat.documentUrl && !selectedFile) {
+                  <button class="btn btn-sm btn-success-outline-doc" type="button"
+                          (click)="ouvrirDocument(selectedContrat)">
+                    <i class="bi bi-file-earmark-check-fill me-1 text-success"></i>
+                    Document existant
+                    <i class="bi bi-box-arrow-up-right ms-2 small"></i>
+                  </button>
+                  <span class="text-muted small mx-2">ou</span>
+                }
+
+                <!-- Bouton choisir fichier -->
+                <input #fileInput type="file"
+                       class="d-none"
+                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                       (change)="onFileSelected($event)">
+
+                @if (!selectedFile) {
+                  <button class="btn btn-sm btn-outline-secondary" type="button"
+                          (click)="fileInput.click()">
+                    <i class="bi bi-upload me-1"></i>
+                    {{ selectedContrat.documentUrl ? 'Remplacer le fichier' : 'Choisir un fichier' }}
+                  </button>
+                  <span class="text-muted ms-2" style="font-size: 0.75rem;">PDF, Word, JPG, PNG — max 10 Mo</span>
+                } @else {
+                  <!-- Fichier sélectionné -->
+                  <div class="doc-selected">
+                    <i class="bi bi-file-earmark-check-fill text-success me-1"></i>
+                    <span class="fw-semibold small">{{ selectedFile.name }}</span>
+                    <span class="text-muted small ms-2">({{ (selectedFile.size / 1024 / 1024).toFixed(2) }} Mo)</span>
+                    <button class="btn btn-sm btn-link text-danger p-0 ms-2" type="button"
+                            (click)="selectedFile = null; fileInput.value = ''">
+                      <i class="bi bi-x-circle"></i>
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+
+          </form>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light" (click)="closeModal()">Annuler</button>
+          <button type="button" class="btn btn-primary px-4" (click)="saveContrat()">
+            <i class="bi bi-check-circle me-2"></i>Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL CONFIRMATION SUPPRESSION -->
+@if (showDeleteConfirm) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-danger text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="showDeleteConfirm = false"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="mb-0">Êtes-vous sûr de vouloir supprimer le contrat de <strong>{{ contratToDelete?.prestataire?.nom }}</strong> ?</p>
+          <p class="text-muted mb-0 mt-2">Cette action est irréversible.</p>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light" (click)="showDeleteConfirm = false">Annuler</button>
+          <button type="button" class="btn btn-danger px-4" (click)="deleteContrat()">
+            <i class="bi bi-trash me-2"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

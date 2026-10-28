@@ -1,0 +1,260 @@
+<div class="container-fluid px-4 py-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h1 class="h3 fw-bold mb-1">
+          <i class="bi bi-table me-2 text-primary"></i>
+          Résultat Estimation {{ estimation?.annee }}
+        </h1>
+        <p class="text-muted mb-0">Vue tableau de bord des jours et revenus par prestataire et par mois</p>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-light px-4" (click)="retourListe()">
+          <i class="bi bi-arrow-left me-2"></i>Retour
+        </button>
+        <button class="btn btn-outline-primary" (click)="editer()">
+          <i class="bi bi-pencil me-2"></i>Éditer
+        </button>
+        <div class="btn-group">
+          <button class="btn btn-success" (click)="exportExcel()">
+            <i class="bi bi-file-earmark-excel me-2"></i>Excel
+          </button>
+          <button class="btn btn-danger" (click)="exportPDF()">
+            <i class="bi bi-file-earmark-pdf me-2"></i>PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  
+    <!-- LOADER -->
+    @if (isLoading) {
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Chargement...</span>
+        </div>
+      </div>
+    } @else if (estimation) {
+      <!-- RÉSUMÉ BUDGÉTAIRE -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm stat-card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="stat-icon bg-primary-subtle">
+                  <i class="bi bi-wallet2 text-primary"></i>
+                </div>
+                <div class="ms-3">
+                  <h4 class="mb-0 fw-bold">{{ estimation.budgetCagnotte | formatMontant }}</h4>
+                  <p class="text-muted mb-0 small">BUDGET CAGNOTTE</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm stat-card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="stat-icon bg-danger-subtle">
+                  <i class="bi bi-cash-stack text-danger"></i>
+                </div>
+                <div class="ms-3">
+                  <h4 class="mb-0 fw-bold text-danger">{{ estimation.budgetConsomme | formatMontant }}</h4>
+                  <p class="text-muted mb-0 small">BUDGET CONSOMMÉ</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm stat-card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="stat-icon" [class.bg-success-subtle]="getBudgetRestant() > 0" [class.bg-danger-subtle]="getBudgetRestant() < 0">
+                  <i class="bi bi-piggy-bank" [class.text-success]="getBudgetRestant() > 0" [class.text-danger]="getBudgetRestant() < 0"></i>
+                </div>
+                <div class="ms-3">
+                  <h4 class="mb-0 fw-bold" [class.text-success]="getBudgetRestant() > 0" [class.text-danger]="getBudgetRestant() < 0">
+                    {{ getBudgetRestant() | formatMontant }}
+                  </h4>
+                  <p class="text-muted mb-0 small">BUDGET RESTANT</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm stat-card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="stat-icon bg-info-subtle">
+                  <i class="bi bi-graph-up-arrow text-info"></i>
+                </div>
+                <div class="ms-3">
+                  <h4 class="mb-0 fw-bold text-info">{{ getGrandTotalRevenu() | formatMontant }}</h4>
+                  <p class="text-muted mb-0 small">TOTAL ESTIMÉ</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- TABLEAU DASHBOARD -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">
+            <i class="bi bi-calendar2-week me-2"></i>
+            Tableau des jours et revenus par mois - {{ estimation.annee }}
+          </h5>
+        </div>
+  
+        <div class="card-body p-0">
+          @if (prestataireRows.length === 0) {
+            <div class="text-center py-5">
+              <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+              <p class="text-muted">Aucune donnée disponible</p>
+            </div>
+          } @else {
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover mb-0 year-table">
+                <thead class="table-primary">
+                  <!-- Ligne titre année -->
+                  <tr>
+                    <th class="text-center year-header" colspan="14">
+                      ANNÉE {{ estimation.annee }}
+                    </th>
+                  </tr>
+  
+                  <!-- Ligne mois -->
+                  <tr>
+                    <th class="px-3 py-2 text-uppercase small sticky-col bg-primary text-white">
+                      PRESTATAIRE
+                    </th>
+  
+                    @for (mois of moisList; track mois.value) {
+                      <th class="text-center px-2 py-2 text-uppercase small">
+                        {{ mois.label }}
+                        <div class="fw-semibold text-dark">
+                          ({{ getTotalJoursForMois(mois.value) | number:'1.0-1' }}j)
+                        </div>
+                      </th>
+                    }
+  
+                    <th class="text-center px-3 py-2 text-uppercase small bg-primary text-white">
+                      TOTAL
+                      <div class="fw-semibold">
+                        ({{ getGrandTotalJours() | number:'1.0-1' }}j)
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+  
+                <tbody>
+                  @for (row of prestataireRows; track row.prestataireId || row.nom) {
+                    <tr>
+                      <!-- Colonne prestataire -->
+                      <td class="px-3 py-2 fw-semibold sticky-col bg-light">
+                        <div>{{ row.nom }}</div>
+                        <small class="text-muted">
+                          {{ row.prestataireId ? 'Existant' : 'Futur' }}
+                        </small>
+                      </td>
+  
+                      <!-- Colonnes mois -->
+                      @for (mois of moisList; track mois.value) {
+                        <td class="text-center px-2 py-2 month-cell"
+                            [class.has-days]="getDataForMois(row, mois.value) !== null"
+                            [class.no-days]="getDataForMois(row, mois.value) === null">
+                          
+                          @if (getDataForMois(row, mois.value); as data) {
+                            <div class="month-content">
+                              <span class="badge days-badge bg-primary">
+                                {{ data.jours | number:'1.0-1' }}j
+                              </span>
+  
+                              <small class="month-amount d-block mt-1">
+                                {{ data.revenu | number:'1.0-0' }} €
+                              </small>
+  
+                              <small class="d-block text-muted" style="font-size: 11px;">
+                                TJM: {{ data.tjm | number:'1.0-0' }} €
+                              </small>
+                            </div>
+                          } @else {
+                            <span class="text-muted">-</span>
+                          }
+                        </td>
+                      }
+  
+                      <!-- Total ligne -->
+                      <td class="text-center px-3 py-2 bg-primary bg-opacity-10 fw-bold">
+                        <div>{{ row.totalJours | number:'1.0-1' }}j</div>
+                        <small>{{ row.totalRevenu | formatMontant }}</small>
+                      </td>
+                    </tr>
+                  }
+  
+                  <!-- LIGNE TOTAUX -->
+                  <tr class="table-secondary fw-bold">
+                    <td class="px-3 py-2 sticky-col">TOTAL GÉNÉRAL</td>
+  
+                    @for (mois of moisList; track mois.value) {
+                      <td class="text-center px-2 py-2">
+                        <div>{{ getTotalJoursForMois(mois.value) | number:'1.0-1' }}j</div>
+                        <small>{{ getTotalRevenuForMois(mois.value) | formatMontant }}</small>
+                      </td>
+                    }
+  
+                    <td class="text-center px-3 py-2 bg-primary text-white">
+                      <div class="fs-5">{{ getGrandTotalJours() | number:'1.0-1' }}j</div>
+                      <small class="fs-6">{{ getGrandTotalRevenu() | formatMontant }}</small>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+  
+            <!-- Récapitulatif final -->
+            <div class="p-4 bg-light border-top">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <div class="alert alert-info mb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span class="fw-semibold">
+                        <i class="bi bi-calendar-check me-2"></i>Total jours
+                      </span>
+                      <strong class="fs-5">{{ getGrandTotalJours() | number:'1.0-1' }}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="alert alert-success mb-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span class="fw-semibold">
+                        <i class="bi bi-cash-stack me-2"></i>Total estimé
+                      </span>
+                      <strong class="fs-5">{{ getGrandTotalRevenu() | formatMontant }}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="alert" [class.alert-warning]="getGrandTotalRevenu() > estimation.budgetCagnotte" [class.alert-success]="getGrandTotalRevenu() <= estimation.budgetCagnotte" style="margin-bottom: 0;">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span class="fw-semibold">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Écart budget
+                      </span>
+                      <strong class="fs-5">{{ (estimation.budgetCagnotte - getGrandTotalRevenu()) | formatMontant }}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>

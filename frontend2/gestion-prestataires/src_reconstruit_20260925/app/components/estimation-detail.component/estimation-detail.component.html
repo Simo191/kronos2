@@ -1,0 +1,335 @@
+<div class="container-fluid px-4 py-4">
+  <!-- EN-TÊTE -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1">
+        <i class="bi bi-calculator-fill me-2 text-primary"></i>
+        {{ isEditMode ? 'Modifier' : 'Nouvelle' }} Estimation
+      </h1>
+      <p class="text-muted mb-0">{{ isEditMode ? 'Modification' : 'Création' }} d'une estimation budgétaire</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-light px-4" (click)="annuler()">
+        <i class="bi bi-x-lg me-2"></i>Annuler
+      </button>
+      <button class="btn btn-primary px-4" (click)="enregistrer()">
+        <i class="bi bi-check-circle me-2"></i>Enregistrer
+      </button>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  @if (notification.show) {
+    <div class="alert alert-dismissible fade show mb-4" 
+         style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+         [class.alert-success]="notification.type === 'success'"
+         [class.alert-danger]="notification.type === 'error'"
+         [class.alert-warning]="notification.type === 'warning'">
+      <i class="bi me-2" 
+         [class.bi-check-circle-fill]="notification.type === 'success'"
+         [class.bi-exclamation-triangle-fill]="notification.type === 'error' || notification.type === 'warning'"></i>
+      {{ notification.message }}
+      <button type="button" class="btn-close" (click)="notification.show = false"></button>
+    </div>
+  }
+
+
+  <!-- ✅ MODAL CONFIRMATION CAGNOTTE TROUVÉE -->
+  @if (showCagnotteConfirm) {
+    <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1055;">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+          <div class="modal-header bg-primary text-white border-0">
+            <h5 class="modal-title fw-bold">
+              <i class="bi bi-piggy-bank-fill me-2"></i>Cagnotte trouvée
+            </h5>
+          </div>
+          <div class="modal-body p-4">
+            <div class="d-flex align-items-start gap-3 mb-3">
+              <div class="rounded-circle bg-primary-subtle d-flex align-items-center justify-content-center flex-shrink-0" style="width:48px;height:48px;">
+                <i class="bi bi-currency-euro text-primary fs-4"></i>
+              </div>
+              <div>
+                <p class="mb-1">Une cagnotte pour l'année <strong>{{ cagnotteConfirmAnnee }}</strong> a été trouvée avec un budget de :</p>
+                <p class="fs-4 fw-bold text-primary mb-1">{{ cagnotteConfirmBudget | formatMontant }}</p>
+                <p class="text-muted small mb-0">Souhaitez-vous utiliser ce budget comme Budget Cagnotte de l'estimation ?</p>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-0 bg-light d-flex gap-2 justify-content-end">
+            <div class="row">
+              <div class="col-8">
+            <button type="button" class="btn btn-primary px-4" (click)="confirmerBudgetCagnotte()">
+              <i class="bi bi-check-circle me-1"></i>Oui, utiliser ce budget
+            </button>
+          </div>
+          <div class="col-8">
+            <button type="button" class="btn btn-outline-secondary" (click)="refuserBudgetCagnotte()">
+              <i class="bi bi-pencil me-1"></i>Non, je saisis manuellement
+            </button>
+          </div>
+          </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ✅ Formulaire EN-TÊTE avec COLLAPSE -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-primary text-white d-flex align-items-center"
+         style="cursor: pointer;" (click)="infoCollapsed = !infoCollapsed">
+      <h5 class="mb-0 flex-shrink-0"><i class="bi bi-info-circle me-2"></i>Informations générales</h5>
+
+      <!-- Résumé centré visible quand collapsé -->
+      @if (infoCollapsed) {
+        <div class="d-flex gap-4 align-items-center justify-content-center flex-grow-1 mx-3">
+          <div class="est-summary-badge">
+            <span class="est-summary-label">Budget Restant</span>
+            <span class="est-summary-value">{{ budgetCagnotte - budgetConsomme | formatMontant }}</span>
+          </div>
+          <div class="est-summary-sep"></div>
+          <div class="est-summary-badge">
+            <span class="est-summary-label">Total Estimé</span>
+            <span class="est-summary-value text-warning">{{ getTotalRevenu() | formatMontant }}</span>
+          </div>
+          <div class="est-summary-sep"></div>
+          <div class="est-summary-badge">
+            <span class="est-summary-label">Écart</span>
+            <span class="est-summary-value"
+                  [class.text-warning]="getTotalRevenu() > budgetCagnotte"
+                  [class.text-white]="getTotalRevenu() <= budgetCagnotte">
+              {{ (budgetCagnotte - getTotalRevenu()) | formatMontant }}
+            </span>
+          </div>
+        </div>
+      } @else {
+        <div class="flex-grow-1"></div>
+      }
+
+      <i class="bi flex-shrink-0" [class.bi-chevron-up]="!infoCollapsed" [class.bi-chevron-down]="infoCollapsed"></i>
+    </div>
+
+    @if (!infoCollapsed) {
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Année <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" [(ngModel)]="annee" [disabled]="isEditMode" min="2020" max="2100" (ngModelChange)="onAnneeChange()">
+            <small class="text-muted">Non modifiable après création</small>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Budget Cagnotte (€) <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" [(ngModel)]="budgetCagnotte" min="0" step="0.01">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Budget Consommé (€) <span class="badge bg-info">Auto</span></label>
+            <input type="number" class="form-control bg-light" [(ngModel)]="budgetConsomme" readonly>
+            <small class="text-muted">Calculé automatiquement (somme des revenus)</small>
+          </div>
+        </div>
+
+        <div class="row g-3 mt-2">
+          <div class="col-md-4">
+            <div class="alert alert-info mb-0">
+              <strong>Budget Restant:</strong> {{ budgetCagnotte - budgetConsomme | formatMontant }}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="alert alert-success mb-0">
+              <strong>Total Estimé:</strong> {{ getTotalRevenu() | formatMontant }}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="alert" [class.alert-warning]="getTotalRevenu() > budgetCagnotte" [class.alert-success]="getTotalRevenu() <= budgetCagnotte">
+              <strong>Écart:</strong> {{ (budgetCagnotte - getTotalRevenu()) | formatMontant }}
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- ✅ TABLEAU MATRICIEL : Prestataires × Mois -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="bi bi-table me-2"></i>Tableau d'estimation ({{ prestataireRows.length }} prestataires)</h5>
+      <button class="btn btn-light btn-sm" (click)="ajouterPrestataire()">
+        <i class="bi bi-plus-lg me-1"></i>Ajouter un prestataire
+      </button>
+    </div>
+    <div class="card-body p-0">
+      @if (prestataireRows.length === 0) {
+        <div class="text-center py-5">
+          <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+          <p class="text-muted">Aucun prestataire ajouté</p>
+          <button class="btn btn-primary" (click)="ajouterPrestataire()">
+            <i class="bi bi-plus-lg me-2"></i>Ajouter le premier prestataire
+          </button>
+        </div>
+      } @else {
+        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+          <table class="table table-bordered table-hover align-middle mb-0" style="font-size: 0.9rem;">
+            <thead class="table-light sticky-top" style="top: 0; z-index: 10;">
+              <tr>
+                <th class="px-2 py-2" style="width: 200px; min-width: 200px;">Prestataire</th>
+                <th class="px-2 py-2 text-center" style="width: 80px;">TJM (€)</th>
+                @for (mois of moisList; track mois.value) {
+                  <th class="px-2 py-2 text-center" style="width: 60px;">{{ mois.label }}</th>
+                }
+                <th class="px-2 py-2 text-center bg-info-subtle" style="width: 80px;">TOTAL</th>
+                <th class="px-2 py-2 text-center" style="width: 60px;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of prestataireRows; track $index; let i = $index) {
+                <tr draggable="true"
+                    [class.est-dragging]="draggedIndex === i"
+                    [class.est-drag-over]="dragOverIndex === i"
+                    (dragstart)="onRowDragStart($event, i)"
+                    (dragover)="onRowDragOver($event, i)"
+                    (dragleave)="onRowDragLeave()"
+                    (drop)="onRowDrop($event, i)"
+                    (dragend)="onRowDragEnd()">
+                  <!-- Prestataire -->
+                  <td class="px-2 py-2">
+                    <div class="d-flex gap-2 align-items-center">
+                      <div class="form-check form-switch" style="min-width: 40px;">
+                        <input class="form-check-input" 
+                               type="checkbox" 
+                               [checked]="row.useFuturePrestataire"
+                               (change)="toggleTypePrestataire(row)">
+                      </div>
+                      @if (!row.useFuturePrestataire) {
+                        <select class="form-select form-select-sm" [(ngModel)]="row.prestataireId" (ngModelChange)="onPrestataireChange(row)">
+                          <option [value]="null">-- Sélectionner --</option>
+                          @for (p of prestataires; track p.id) {
+                            <option [value]="p.id">{{ p.nom }} {{ p.prenom }}@if (p.entreprise) { ({{ p.entreprise.code || p.entreprise.nom }})}</option>
+                          }
+                        </select>
+                      } @else {
+                        <input type="text" 
+                               class="form-control form-control-sm" 
+                               [(ngModel)]="row.nomFuturPrestataire"
+                               placeholder="Futur prestataire">
+                      }
+                    </div>
+                  </td>
+
+                  <!-- TJM -->
+                  <td class="px-2 py-2">
+                    <input type="number" 
+                           class="form-control form-control-sm text-center" 
+                           [(ngModel)]="row.tjm"
+                           (ngModelChange)="onTjmChange(row)"
+                           min="0"
+                           step="0.01"
+                           style="width: 80px;">
+                  </td>
+
+                  <!-- Jours par mois (Jan-Dec) -->
+                  @for (mois of moisList; track mois.value) {
+                    <td class="px-1 py-1 text-center">
+                      <input type="number" 
+                             class="form-control form-control-sm text-center" 
+                             [ngModel]="row.moisData[mois.value]?.jours || 0"
+                             (ngModelChange)="onJoursChange(row, mois.value, $event)"
+                             min="0"
+                             step="0.5"
+                             style="font-size: 0.85rem;"
+                             placeholder="0">
+                    </td>
+                  }
+
+                  <!-- Total -->
+                  <td class="px-2 py-2 text-center bg-info-subtle">
+                    <div class="fw-bold">{{ row.totalJours }}j</div>
+                    <div class="small text-muted">{{ row.totalRevenu | formatMontant }}</div>
+                  </td>
+
+                  <!-- Action -->
+                  <td class="px-2 py-2 text-center">
+                    <button class="btn btn-sm btn-outline-danger" 
+                            (click)="demanderSuppression(i)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              }
+
+              <!-- Ligne TOTAUX -->
+              <tr class="table-primary fw-bold">
+                <td class="px-2 py-2">TOTAL GÉNÉRAL</td>
+                <td class="px-2 py-2 text-center">-</td>
+                @for (mois of moisList; track mois.value) {
+                  <td class="px-2 py-2 text-center">
+                    <div>{{ getTotalMois(mois.value) }}j</div>
+                    <div class="small">{{ getTotalRevenuMois(mois.value) | formatMontant }}</div>
+                  </td>
+                }
+                <td class="px-2 py-2 text-center bg-primary text-white">
+                  <div class="fs-6">{{ getGrandTotal() }}j</div>
+                  <div class="small">{{ getTotalRevenu() | formatMontant }}</div>
+                </td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-3 border-top bg-light">
+          <button class="btn btn-success" (click)="ajouterPrestataire()">
+            <i class="bi bi-plus-lg me-2"></i>Ajouter un prestataire
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Boutons d'action en bas -->
+  <div class="d-flex justify-content-end gap-2 mt-4">
+    <button class="btn btn-light px-4" (click)="annuler()">
+      <i class="bi bi-x-lg me-2"></i>Annuler
+    </button>
+    <button class="btn btn-primary px-4" (click)="enregistrer()" [disabled]="isLoading">
+      <i class="bi bi-check-circle me-2"></i>Enregistrer
+    </button>
+  </div>
+</div>
+
+<!-- ✅ MODAL CONFIRMATION SUPPRESSION -->
+@if (showDeleteConfirm) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-danger text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="annulerSuppression()"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="mb-0">Êtes-vous sûr de vouloir supprimer ce prestataire du tableau ?</p>
+          <p class="text-muted mb-0 mt-2">Cette action est irréversible.</p>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light" (click)="annulerSuppression()">Annuler</button>
+          <button type="button" class="btn btn-danger px-4" (click)="confirmerSuppression()">
+            <i class="bi bi-trash me-2"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ✅ MODAL ATTENTE EN FRANÇAIS -->
+@if (isLoading) {
+  <div class="modal-overlay-loading">
+    <div class="modal-loading-card">
+      <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+      <h5 class="fw-bold mb-1">{{ loadingMessage }}</h5>
+      <p class="text-muted mb-0 small">Veuillez patienter...</p>
+    </div>
+  </div>
+}

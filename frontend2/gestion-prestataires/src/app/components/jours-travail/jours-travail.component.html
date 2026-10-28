@@ -1,0 +1,802 @@
+<div class="container-fluid px-4 py-4">
+  <!-- En-tête -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1">
+        <i class="bi bi-calendar-check-fill me-2 text-primary"></i>Jours de Travail
+      </h1>
+      <p class="text-muted mb-0">Gérez les jours travaillés de vos prestataires</p>
+    </div>
+    <div class="d-flex gap-2">
+      <div class="btn-group" role="group">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          [class.active]="viewMode === 'list'"
+          (click)="toggleViewMode('list')">
+          <i class="bi bi-list-ul"></i> Liste
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          [class.active]="viewMode === 'cards'"
+          (click)="toggleViewMode('cards')">
+          <i class="bi bi-grid-3x3-gap-fill"></i> Cartes
+        </button>
+      </div>
+      @if (canManage()) {
+        <button class="btn btn-primary px-4" (click)="openModal()">
+          <i class="bi bi-plus-lg me-2"></i>Ajouter un jour
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Cartes statistiques -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-primary-subtle">
+              <i class="bi bi-calendar3 text-primary"></i>
+            </div>
+            <div class="ms-3">
+              <h3 class="mb-0 fw-bold">{{ totalJours }}</h3>
+              <p class="text-muted mb-0 small">TOTAL JOURS</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    @if (canViewRevenu()) {
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm stat-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-success-subtle">
+                <i class="bi bi-currency-euro text-success"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ revenuTotal | formatMontant }}</h3>
+                <p class="text-muted mb-0 small">REVENU TOTAL</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+    @if (canViewTJM()) {
+      <div class="col-md-4">
+        <div class="card border-0 shadow-sm stat-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-info-subtle">
+                <i class="bi bi-graph-up-arrow text-info"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ tjmMoyen | formatMontant }}</h3>
+                <p class="text-muted mb-0 small">TJM MOYEN</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <!-- ✅ Système de notifications centralisé -->
+  <app-notification-toast></app-notification-toast>
+
+
+  <!-- Tableau -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <!-- Barre de filtres — flex-nowrap + min-width:0 → TOUT sur la même ligne -->
+      <div class="p-3 border-bottom bg-light">
+        <div class="d-flex align-items-center gap-2 flex-nowrap">
+          <div class="input-group flex-grow-1" style="min-width: 0; flex-basis: 0;">
+            <span class="input-group-text bg-white border-end-0">
+              <i class="bi bi-search text-muted"></i>
+            </span>
+            <input type="text" class="form-control border-start-0 ps-0"
+                   placeholder="Rechercher un prestataire ou un mois..."
+                   [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()">
+          </div>
+          <select class="form-select flex-shrink-1" style="min-width: 0; flex-basis: 170px;"
+                  [(ngModel)]="filterPrestataire" (ngModelChange)="applyFilters()">
+            <option value="">Tous les prestataires</option>
+            @for (p of prestataires; track p.id) {
+              <option [value]="p.id" [class.is-inactive-opt]="p.isActive === false">
+                @if (p.isActive === false) { ⊘ }{{ p.nom }} {{ p.prenom }}@if (p.entreprise) { ({{ p.entreprise.code || p.entreprise.nom }})}
+              </option>
+            }
+          </select>
+          <select class="form-select flex-shrink-1" style="min-width: 0; flex-basis: 130px;"
+                  [(ngModel)]="filterAnnee" (ngModelChange)="applyFilters()">
+            <option value="">Toutes les années</option>
+            @for (annee of anneesUniques; track annee) {
+              <option [value]="annee">{{ annee }}</option>
+            }
+          </select>
+          <select class="form-select flex-shrink-1" style="min-width: 0; flex-basis: 150px;"
+                  [(ngModel)]="filterMois" (ngModelChange)="applyFilters()">
+            <option value="">Tous les mois</option>
+            @for (mois of moisUniques; track mois) {
+              <option [value]="mois">{{ formatMois(mois) }}</option>
+            }
+          </select>
+          <div class="input-group flex-shrink-1" style="min-width: 0; flex-basis: 170px;">
+            <select class="form-select" [(ngModel)]="sortColumn" (ngModelChange)="onSortChange()">
+              <option value="">Trier par...</option>
+              <option value="prestataire">Prestataire</option>
+              <option value="mois">Mois</option>
+              <option value="jours">Jours</option>
+              @if (canViewTJM()) { <option value="tjm">TJM</option> }
+              @if (canViewRevenu()) { <option value="revenu">Revenu</option> }
+            </select>
+            @if (sortColumn) {
+              <button class="btn btn-outline-secondary" type="button" (click)="toggleSortDirection()" title="Inverser le tri">
+                <i class="bi" [ngClass]="sortDirection === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
+              </button>
+            }
+          </div>
+          <!--   Toggle compact tout à droite — flex-shrink-0 = ne rétrécit jamais -->
+          <label class="show-inactive-toggle flex-shrink-0" [class.is-on]="showInactivePrest"
+                 title="Inclure les collaborateurs désactivés (historique)">
+            <input type="checkbox" [checked]="showInactivePrest" (change)="toggleShowInactivePrest()">
+            <span class="toggle-track"></span>
+            <i class="bi bi-slash-circle"></i>
+            <span>Désactivés</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Loader -->
+      @if (isLoading) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+        </div>
+      } @else {
+        
+        @if (viewMode === 'list') {
+          <!-- VUE LISTE -->
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted sortable" 
+                      (click)="sortBy('prestataire')"
+                      [class.sorted]="isSorted('prestataire')">
+                    Prestataire
+                    <i class="bi ms-1" [ngClass]="getSortIcon('prestataire')"></i>
+                  </th>
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted sortable" 
+                      (click)="sortBy('mois')"
+                      [class.sorted]="isSorted('mois')">
+                    Mois
+                    <i class="bi ms-1" [ngClass]="getSortIcon('mois')"></i>
+                  </th>
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted sortable" 
+                      (click)="sortBy('jours')"
+                      [class.sorted]="isSorted('jours')">
+                    Jours
+                    <i class="bi ms-1" [ngClass]="getSortIcon('jours')"></i>
+                  </th>
+                  @if (canViewTJM()) {
+                    <th class="px-4 py-3 text-uppercase small fw-semibold text-muted sortable" 
+                        (click)="sortBy('tjm')"
+                        [class.sorted]="isSorted('tjm')">
+                      TJM
+                      <i class="bi ms-1" [ngClass]="getSortIcon('tjm')"></i>
+                    </th>
+                  }
+                  @if (canViewRevenu()) {
+                    <th class="px-4 py-3 text-uppercase small fw-semibold text-muted sortable" 
+                        (click)="sortBy('revenu')"
+                        [class.sorted]="isSorted('revenu')">
+                      Revenu
+                      <i class="bi ms-1" [ngClass]="getSortIcon('revenu')"></i>
+                    </th>
+                  }
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted">Description</th>
+                  <!-- ✅ NOUVELLE COLONNE VERROUILLAGE -->
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted text-center">🔒</th>
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (groupe of getGroupedByMoisAnnee; track groupe.mois) {
+
+                  <!-- ✅ SÉPARATEUR MOIS/ANNÉE — Zodiac -->
+                  <tr class="group-mois-header" (click)="toggleGroup(groupe.mois)" style="cursor:pointer;">
+                    <td colspan="9" class="group-mois-cell"
+                        [style.background]="getGroupColor(groupe.mois).light"
+                        [style.border-left-color]="getGroupColor(groupe.mois).bg"
+                        [style.border-top-color]="getGroupColor(groupe.mois).border"
+                        [style.border-bottom-color]="getGroupColor(groupe.mois).border">
+                      <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                          <!-- Icône zodiac avec image réelle -->
+                          <span class="group-zodiac-icon"
+                                [style.background]="'linear-gradient(135deg, ' + getGroupColor(groupe.mois).bg + ', ' + getGroupColor(groupe.mois).bg2 + ')'">
+                            <img [src]="getGroupColor(groupe.mois).img" alt="" style="width:28px;height:28px;object-fit:cover;border-radius:7px;">
+                          </span>
+                          <div class="d-flex flex-column lh-1">
+                            <span class="group-mois-label" [style.color]="getGroupColor(groupe.mois).bg">
+                              {{ groupe.label }}
+                            </span>
+                            <span class="group-zodiac-name" [style.color]="getGroupColor(groupe.mois).bg2">
+                              {{ getGroupColor(groupe.mois).name }}
+                            </span>
+                          </div>
+                          <span class="group-mois-count" [style.background]="getGroupColor(groupe.mois).bg">
+                            {{ groupe.jours.length }} entrée(s)
+                          </span>
+                          @if (isMoisVerrouille(groupe.mois)) {
+                            <span class="badge bg-warning text-dark" style="font-size:10px;">
+                              <i class="bi bi-lock-fill me-1"></i>Verrouillé
+                            </span>
+                          }
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                          <div class="d-flex gap-3 group-mois-stats">
+                            <span><i class="bi bi-brightness-high me-1"></i><strong>{{ groupe.totalJours }}j</strong></span>
+                            @if (canViewRevenu()) {
+                              <span><i class="bi bi-wallet2 me-1"></i><strong>{{ groupe.totalRevenu | formatMontant }}</strong></span>
+                            }
+                          </div>
+                          <span class="group-collapse-btn" [style.color]="getGroupColor(groupe.mois).bg">
+                            <i class="bi" [ngClass]="isGroupCollapsed(groupe.mois) ? 'bi-chevron-right' : 'bi-chevron-down'"></i>
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Lignes du groupe (cachées si collapsed) -->
+                  @if (!isGroupCollapsed(groupe.mois)) {
+                    @for (jour of groupe.jours; track jour.id) {
+                      <tr class="group-mois-row" [style.border-left]="'3px solid ' + getGroupColor(groupe.mois).border">
+                        <td class="px-4 py-3">
+                          <div class="d-flex align-items-center">
+                            <div class="jt-avatar-wrap me-2">
+                              @if (getAvatarUrl(jour.prestataire?.imageUrl)) {
+                                <img [src]="getAvatarUrl(jour.prestataire?.imageUrl)!"
+                                     class="jt-avatar-img"
+                                     [alt]="jour.prestataire?.prenom"
+                                     (error)="jour.prestataire!.imageUrl = undefined">
+                              } @else {
+                                <div class="avatar-circle" [style.background]="getGroupColor(jour.mois).bg">
+                                  {{ getInitials(jour.prestataire?.nom, jour.prestataire?.prenom) }}
+                                </div>
+                              }
+                            </div>
+                            <div>
+                              <div class="fw-semibold">
+                                {{ jour.prestataire?.nom || 'N/A' }} {{ jour.prestataire?.prenom || '' }}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="px-4 py-3">
+                          <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="d-inline-flex align-items-center">
+                              <img [src]="getGroupColor(jour.mois).img" alt="" style="width:20px;height:20px;border-radius:5px;object-fit:cover;vertical-align:middle;" class="me-2">
+                              <span class="fw-medium">{{ formatMois(jour.mois) }}</span>
+                            </span>
+                            @if (jour.prestataire?.entreprise) {
+                              <span class="badge ent-tag"
+                                    [title]="jour.prestataire?.entreprise?.nom">
+                                <i class="bi bi-building me-1"></i>{{ jour.prestataire?.entreprise?.code || jour.prestataire?.entreprise?.nom }}
+                              </span>
+                            }
+                          </div>
+                        </td>
+                        <td class="px-4 py-3">
+                          <span class="badge px-3 py-2" [style.background]="getGroupColor(jour.mois).light" [style.color]="getGroupColor(jour.mois).bg" [style.border]="'1px solid ' + getGroupColor(jour.mois).border">
+                            {{ jour.nombreJours }}j
+                          </span>
+                        </td>
+                        @if (canViewTJM()) {
+                          <td class="px-4 py-3">
+                            <span class="badge bg-success text-white px-3 py-2">
+                              {{ jour.tjm | formatMontant }}/jour
+                            </span>
+                          </td>
+                        }
+                        @if (canViewRevenu()) {
+                          <td class="px-4 py-3">
+                            <span class="fw-bold text-success">{{ jour.nombreJours * jour.tjm | formatMontant }}</span>
+                          </td>
+                        }
+                        <td class="px-4 py-3">
+                          <span class="text-muted">{{ jour.description || '-' }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                          @if (isMoisVerrouille(jour.mois)) {
+                            <i class="bi bi-lock-fill text-warning" title="{{ getMoisVerrouilleInfo(jour.mois) }}" style="font-size: 1.1rem;"></i>
+                          }
+                        </td>
+                        <td class="px-4 py-3 text-end position-relative">
+                          @if (canModifyJour(jour) || canDeleteJour(jour)) {
+                            <div class="dropdown">
+                              <button class="btn btn-sm btn-light" type="button"
+                                      (click)="toggleDropdown(jour.id!, $event)"
+                                      [attr.aria-expanded]="isDropdownOpen(jour.id!)">
+                                <i class="bi bi-three-dots-vertical"></i>
+                              </button>
+                              @if (isDropdownOpen(jour.id!)) {
+                                <ul class="dropdown-menu dropdown-menu-end show" style="position: absolute; right: 0; top: 100%;">
+                                  @if (canModifyJour(jour)) {
+                                    <li>
+                                      <a class="dropdown-item" (click)="editJour(jour)" style="cursor: pointer;">
+                                        <i class="bi bi-pencil-square me-2 text-primary"></i>Modifier
+                                      </a>
+                                    </li>
+                                  }
+                                  @if (canDeleteJour(jour)) {
+                                    @if (canModifyJour(jour)) {
+                                      <li><hr class="dropdown-divider"></li>
+                                    }
+                                    <li>
+                                      <a class="dropdown-item text-danger" (click)="confirmDelete(jour)" style="cursor: pointer;">
+                                        <i class="bi bi-trash3-fill me-2"></i>Supprimer
+                                      </a>
+                                    </li>
+                                  }
+                                </ul>
+                              }
+                            </div>
+                          } @else {
+                            <span class="text-muted small">-</span>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  }
+                } @empty {
+                  <tr>
+                    <td colspan="9" class="text-center py-5">
+                      <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                      <p class="text-muted">Aucun jour de travail trouvé</p>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <!-- VUE CARTES -->
+          <div class="p-4">
+
+            <!-- ✅ Barre actions globales expand/collapse tout -->
+            @if (getGroupedByMoisAnnee.length > 1) {
+              <div class="d-flex justify-content-end gap-2 mb-3">
+                <button class="btn btn-sm btn-outline-secondary" (click)="expandAll()" [disabled]="!allCollapsed">
+                  <i class="bi bi-arrows-expand me-1"></i>Tout ouvrir
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" (click)="collapseAll()" [disabled]="allCollapsed">
+                  <i class="bi bi-arrows-collapse me-1"></i>Tout réduire
+                </button>
+              </div>
+            }
+
+            @for (groupe of getGroupedByMoisAnnee; track groupe.mois) {
+
+              <!-- ✅ HEADER GROUPE — Zodiac -->
+              <div class="group-mois-section-header mb-3"
+                   [class.mt-4]="!$first"
+                   [style.background]="getGroupColor(groupe.mois).light"
+                   [style.border-left-color]="getGroupColor(groupe.mois).bg"
+                   [style.border-top-color]="getGroupColor(groupe.mois).border"
+                   [style.border-bottom-color]="getGroupColor(groupe.mois).border"
+                   [style.border-right-color]="getGroupColor(groupe.mois).border"
+                   (click)="toggleGroup(groupe.mois)"
+                   style="cursor:pointer;">
+                <div class="d-flex align-items-center justify-content-between w-100">
+                  <div class="d-flex align-items-center gap-2">
+                    <!-- Icône zodiac avec image réelle -->
+                    <span class="group-zodiac-icon"
+                          [style.background]="'linear-gradient(135deg, ' + getGroupColor(groupe.mois).bg + ', ' + getGroupColor(groupe.mois).bg2 + ')'">
+                      <img [src]="getGroupColor(groupe.mois).img" alt="" style="width:28px;height:28px;object-fit:cover;border-radius:7px;">
+                    </span>
+                    <div class="d-flex flex-column lh-1">
+                      <span class="group-mois-label" [style.color]="getGroupColor(groupe.mois).bg">
+                        {{ groupe.label }}
+                      </span>
+                      <span class="group-zodiac-name" [style.color]="getGroupColor(groupe.mois).bg2">
+                        {{ getGroupColor(groupe.mois).name }}
+                      </span>
+                    </div>
+                    <span class="group-mois-count" [style.background]="getGroupColor(groupe.mois).bg">
+                      {{ groupe.jours.length }} entrée(s)
+                    </span>
+                    @if (isMoisVerrouille(groupe.mois)) {
+                      <span class="badge bg-warning text-dark" style="font-size:10px;">
+                        <i class="bi bi-lock-fill me-1"></i>Verrouillé
+                      </span>
+                    }
+                  </div>
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="d-flex gap-3 group-mois-stats">
+                      <span><i class="bi bi-brightness-high me-1"></i><strong>{{ groupe.totalJours }}j</strong></span>
+                      @if (canViewRevenu()) {
+                        <span><i class="bi bi-wallet2 me-1"></i><strong>{{ groupe.totalRevenu | formatMontant }}</strong></span>
+                      }
+                    </div>
+                    <span class="group-collapse-btn" [style.color]="getGroupColor(groupe.mois).bg">
+                      <i class="bi" [ngClass]="isGroupCollapsed(groupe.mois) ? 'bi-chevron-right' : 'bi-chevron-down'"></i>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cartes du groupe (cachées si collapsed) -->
+              @if (!isGroupCollapsed(groupe.mois)) {
+                <div class="row g-3 mb-2">
+                  @for (jour of groupe.jours; track jour.id) {
+                    <div class="col-md-6 col-lg-4">
+                      <div class="card border-0 shadow-sm h-100 jour-card"
+                           [style.border-top-color]="getGroupColor(jour.mois).bg"
+                           [style.border-top-width.px]="3"
+                           [style.border-top-style]="'solid'">
+                        <div class="card-body">
+                          <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center flex-grow-1">
+                              <div class="jt-avatar-wrap-large me-3">
+                                @if (getAvatarUrl(jour.prestataire?.imageUrl)) {
+                                  <img [src]="getAvatarUrl(jour.prestataire?.imageUrl)!"
+                                       class="jt-avatar-img-large"
+                                       [alt]="jour.prestataire?.prenom"
+                                       (error)="jour.prestataire!.imageUrl = undefined">
+                                } @else {
+                                  <div class="avatar-circle-large" [style.background]="getGroupColor(jour.mois).bg">
+                                    {{ getInitials(jour.prestataire?.nom, jour.prestataire?.prenom) }}
+                                  </div>
+                                }
+                              </div>
+                              <div>
+                                <h6 class="mb-1 fw-bold">{{ jour.prestataire?.nom || 'N/A' }}</h6>
+                                <span class="badge px-2 py-1 d-inline-flex align-items-center gap-1"
+                                      [style.background]="getGroupColor(jour.mois).light"
+                                      [style.color]="getGroupColor(jour.mois).bg"
+                                      [style.border]="'1px solid ' + getGroupColor(jour.mois).border">
+                                  <img [src]="getGroupColor(jour.mois).img" alt="" style="width:16px;height:16px;border-radius:4px;object-fit:cover;">
+                                  {{ formatMois(jour.mois) }}
+                                </span>
+                                @if (jour.prestataire?.entreprise) {
+                                  <span class="badge ent-tag ms-2"
+                                        [title]="jour.prestataire?.entreprise?.nom">
+                                    <i class="bi bi-building me-1"></i>{{ jour.prestataire?.entreprise?.code || jour.prestataire?.entreprise?.nom }}
+                                  </span>
+                                }
+                                @if (isMoisVerrouille(jour.mois)) {
+                                  <span class="badge bg-warning text-dark ms-2" title="{{ getMoisVerrouilleInfo(jour.mois) }}">
+                                    <i class="bi bi-lock-fill me-1"></i>Verrouillé
+                                  </span>
+                                }
+                              </div>
+                            </div>
+                            @if (canModifyJour(jour) || canDeleteJour(jour)) {
+                              <div class="dropdown position-relative">
+                                <button class="btn btn-sm btn-light" type="button"
+                                        (click)="toggleCardMenu(jour.id!, $event)">
+                                  <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                @if (activeCardMenuId === jour.id) {
+                                  <div class="dropdown-menu dropdown-menu-end show" style="position: absolute; right: 0; top: 100%;">
+                                    @if (canModifyJour(jour)) {
+                                      <button class="dropdown-item" (click)="editJour(jour); closeCardMenu()">
+                                        <i class="bi bi-pencil-square me-2"></i>Modifier
+                                      </button>
+                                    }
+                                    @if (canDeleteJour(jour)) {
+                                      <div class="dropdown-divider"></div>
+                                      <button class="dropdown-item text-danger" (click)="confirmDelete(jour); closeCardMenu()">
+                                        <i class="bi bi-trash3-fill me-2"></i>Supprimer
+                                      </button>
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </div>
+
+                          <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                              <span class="text-muted small"><i class="bi bi-brightness-high me-1"></i>Nombre de jours</span>
+                              <span class="fw-bold">{{ jour.nombreJours }}j</span>
+                            </div>
+                            @if (canViewTJM()) {
+                              <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small"><i class="bi bi-tag me-1"></i>TJM</span>
+                                <span class="fw-semibold">{{ jour.tjm | formatMontant }}/jour</span>
+                              </div>
+                            }
+                            @if (canViewRevenu()) {
+                              <div class="d-flex justify-content-between">
+                                <span class="text-muted small"><i class="bi bi-wallet2 me-1"></i>Revenu</span>
+                                <span class="fw-bold text-success">{{ jour.nombreJours * jour.tjm | formatMontant }}</span>
+                              </div>
+                            }
+                            @if (jour.description) {
+                              <div class="mt-2 pt-2 border-top">
+                                <small class="text-muted"><i class="bi bi-chat-left-text me-1"></i>{{ jour.description }}</small>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            } @empty {
+              <div class="text-center py-5">
+                <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                <p class="text-muted">Aucun jour de travail enregistré</p>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Pagination -->
+        @if (filteredJours.length > 0) {
+          <div class="p-3 border-top bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+              <small class="text-muted">
+                Affichage de {{ filteredJours.length }} sur {{ joursTravail.length }} résultats
+              </small>
+              <nav>
+                <ul class="pagination pagination-sm mb-0">
+                  <li class="page-item disabled">
+                    <a class="page-link">Précédent</a>
+                  </li>
+                  <li class="page-item active">
+                    <a class="page-link">1</a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link">2</a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link">3</a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link">Suivant</a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+@if (isModalOpen) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-calendar-check me-2"></i>
+            {{ isEditMode ? 'Modifier' : 'Nouveau' }} Jour de Travail
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Prestataire <span class="text-danger">*</span></label>
+              <select 
+                class="form-select" 
+                [(ngModel)]="selectedJour.prestataireId" 
+                name="prestataireId" 
+                (change)="onPrestataireChange()" 
+                [disabled]="!canManage()"
+                required>
+                <option value="">-- Sélectionner un prestataire --</option>
+                @for (prestataire of prestataires; track prestataire.id) {
+                  <option [value]="prestataire.id">{{ prestataire.nom }} {{ prestataire.prenom }}@if (prestataire.entreprise) { ({{ prestataire.entreprise.code || prestataire.entreprise.nom }})}</option>
+                }
+              </select>
+              @if (!canManage()) {
+                <small class="text-muted">Vous ne pouvez ajouter que vos propres jours de travail</small>
+              }
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Mois <span class="text-danger">*</span></label>
+                <div class="custom-month-picker" (click)="toggleMonthPicker($event)">
+                  <input 
+                    type="text" 
+                    class="form-control" 
+                    [value]="formatMoisInput(selectedJour.mois || '')"
+                    readonly
+                    placeholder="Sélectionner un mois"
+                    required>
+                  <i class="bi bi-calendar3 month-picker-icon"></i>
+                  
+                  @if (showMonthPicker) {
+                    <div class="month-picker-dropdown" (click)="$event.stopPropagation()">
+                      <div class="month-picker-header">
+                        <button type="button" class="btn btn-sm btn-light" (click)="changeYear(-1, $event)">
+                          <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <span class="fw-bold">{{ selectedYear }}</span>
+                        <button type="button" class="btn btn-sm btn-light" (click)="changeYear(1, $event)">
+                          <i class="bi bi-chevron-right"></i>
+                        </button>
+                      </div>
+                      <div class="month-picker-grid">
+                        @for (mois of moisList; track mois.value) {
+                          <button 
+                            type="button"
+                            class="month-picker-item"
+                            [class.active]="isMonthSelected(mois.value)"
+                            [class.locked]="isMoisVerrouille(selectedYear + '-' + mois.value.toString().padStart(2, '0'))"
+                            [disabled]="!canManage() && isMoisVerrouille(selectedYear + '-' + mois.value.toString().padStart(2, '0'))"
+                            (click)="selectMonth(mois.value, $event)">
+                            {{ mois.label }}
+                            <!-- ✅ CADENAS SUR MOIS VERROUILLÉ -->
+                            @if (isMoisVerrouille(selectedYear + '-' + mois.value.toString().padStart(2, '0'))) {
+                              <i class="bi bi-lock-fill ms-1 text-warning" style="font-size: 0.8rem;"></i>
+                            }
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Nombre de Jours <span class="text-danger">*</span></label>
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  [(ngModel)]="selectedJour.nombreJours" 
+                  name="nombreJours" 
+                  min="0" 
+                  max="31" 
+                  step="0.5" 
+                  required>
+              </div>
+            </div>
+
+            <!-- Quota du contrat -->
+            <div class="mb-3">
+              @if (contratQuotaInfo.nombreJoursContrat > 0) {
+                <div class="alert alert-info mb-0">
+                  <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>Quota du contrat</strong>
+                  </div>
+                  
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between small mb-1">
+                      <span>Jours utilisés</span>
+                      <strong>{{ contratQuotaInfo.joursDejaUtilises }} / {{ contratQuotaInfo.nombreJoursContrat }} jours</strong>
+                    </div>
+                    
+                    <div class="progress" style="height: 8px;">
+                      <div 
+                        class="progress-bar"
+                        [class.bg-success]="contratQuotaInfo.pourcentageUtilise < 70"
+                        [class.bg-warning]="contratQuotaInfo.pourcentageUtilise >= 70 && contratQuotaInfo.pourcentageUtilise < 90"
+                        [class.bg-danger]="contratQuotaInfo.pourcentageUtilise >= 90"
+                        [style.width.%]="contratQuotaInfo.pourcentageUtilise">
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="d-flex justify-content-between small">
+                    <span>Jours restants</span>
+                    <strong 
+                      [class.text-success]="contratQuotaInfo.joursRestants > 20"
+                      [class.text-warning]="contratQuotaInfo.joursRestants <= 20 && contratQuotaInfo.joursRestants > 5"
+                      [class.text-danger]="contratQuotaInfo.joursRestants <= 5">
+                      {{ contratQuotaInfo.joursRestants }} jour(s)
+                    </strong>
+                  </div>
+                </div>
+              } @else if (selectedJour.prestataireId && selectedJour.mois) {
+                <div class="alert alert-warning mb-0">
+                  <i class="bi bi-exclamation-triangle me-2"></i>
+                  Aucun contrat actif trouvé pour ce prestataire sur ce mois.
+                </div>
+              }
+            </div>
+
+            @if (canViewTJM()) {
+              <div class="mb-3">
+                <label class="form-label fw-semibold">TJM (€) <span class="text-danger">*</span></label>
+                <input 
+                  type="number" 
+                  class="form-control bg-light" 
+                  [(ngModel)]="selectedJour.tjm" 
+                  name="tjm" 
+                  min="0" 
+                  step="0.01" 
+                  required 
+                  readonly>
+              
+                <small class="text-muted">Récupéré automatiquement depuis le contrat actif</small>
+              
+                @if (!tjmFromContratFound) {
+                  <div class="alert alert-warning mt-2 mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Aucun contrat actif trouvé pour ce prestataire sur ce mois.
+                  </div>
+                }
+              </div>
+            }
+
+            @if (canViewRevenu()) {
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Revenu calculé</label>
+                <div class="alert alert-success mb-0">
+                  <i class="bi bi-calculator me-2"></i>
+                  <strong>{{ (selectedJour.nombreJours || 0) * (selectedJour.tjm || 0) }}€</strong>
+                </div>
+              </div>
+            }
+
+            <div class="mb-0">
+              <label class="form-label fw-semibold">Description</label>
+              <textarea 
+                class="form-control" 
+                [(ngModel)]="selectedJour.description" 
+                name="description" 
+                rows="3"
+                placeholder="Ajoutez une description optionnelle..."></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light" (click)="closeModal()">Annuler</button>
+          <button type="button" class="btn btn-primary px-4" (click)="saveJour()">
+            <i class="bi bi-check-circle me-2"></i>Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL CONFIRMATION SUPPRESSION -->
+@if (showDeleteConfirm) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-danger text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="showDeleteConfirm = false"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="mb-0">Êtes-vous sûr de vouloir supprimer le jour de travail de
+  <strong>{{ jourToDelete?.prestataire?.nom }} {{ jourToDelete?.prestataire?.prenom }}</strong>@if (jourToDelete?.prestataire?.entreprise) {
+    <small class="text-muted ms-1">({{ jourToDelete?.prestataire?.entreprise?.code || jourToDelete?.prestataire?.entreprise?.nom }})</small>
+  } pour le mois de <strong>{{ formatMois(jourToDelete?.mois || '') }}</strong> ?
+</p>
+          <p class="text-muted mb-0 mt-2">Cette action est irréversible.</p>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light" (click)="showDeleteConfirm = false">Annuler</button>
+          <button type="button" class="btn btn-danger px-4" (click)="deleteJour()">
+            <i class="bi bi-trash me-2"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

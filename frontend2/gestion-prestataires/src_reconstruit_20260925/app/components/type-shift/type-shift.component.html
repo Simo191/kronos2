@@ -1,0 +1,324 @@
+<div class="container-fluid px-4 py-4">
+  
+  <!-- EN-TÊTE -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1">
+        <i class="bi bi-tags-fill me-2 text-primary"></i>Gestion des Types de Shifts
+      </h1>
+      <p class="text-muted mb-0">Créez et gérez les différents types de shifts disponibles</p>
+    </div>
+    <button class="btn btn-primary px-4" (click)="openCreateModal()">
+      <i class="bi bi-plus-lg me-2"></i>Nouveau Type
+    </button>
+  </div>
+
+  <!-- STATISTIQUES -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-primary-subtle">
+              <i class="bi bi-collection text-primary"></i>
+            </div>
+            <div class="ms-3">
+              <h3 class="mb-0 fw-bold">{{ typeShifts.length }}</h3>
+              <p class="text-muted mb-0 small">TYPES CONFIGURÉS</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-success-subtle">
+              <i class="bi bi-check-circle text-success"></i>
+            </div>
+            <div class="ms-3">
+              <h3 class="mb-0 fw-bold">{{ activeTypeShiftsCount  }}</h3>
+              <p class="text-muted mb-0 small">ACTIFS</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-warning-subtle">
+              <i class="bi bi-palette text-warning"></i>
+            </div>
+            <div class="ms-3">
+              <h3 class="mb-0 fw-bold">10</h3>
+              <p class="text-muted mb-0 small">COULEURS DISPONIBLES</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LISTE DES TYPES -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+      @if (typeShifts.length === 0) {
+        <!-- Empty state -->
+        <div class="text-center py-5">
+          <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+          <p class="text-muted mb-3">Aucun type de shift configuré</p>
+          <button class="btn btn-primary" (click)="openCreateModal()">
+            <i class="bi bi-plus-lg me-2"></i>Créer le premier type
+          </button>
+        </div>
+      } @else {
+        <div class="row g-3">
+          @for (typeShift of typeShifts; track typeShift.id; let i = $index) {
+            <div class="col-md-6 col-lg-4">
+              <div class="card border-0 shadow-sm h-100 type-shift-card" [class.inactive-card]="!typeShift.isActive">
+                <div class="card-body">
+                  <!-- Badge preview -->
+                  <div class="text-center mb-3">
+                    <div class="preview-badge d-inline-flex align-items-center justify-content-center"
+                         [ngClass]="[typeShift.bgColor, typeShift.borderColor, typeShift.textColor]"
+                         [style]="getPreviewStyleForType(typeShift)">
+                      {{ typeShift.shortLabel }}
+                    </div>
+                  </div>
+
+                  <!-- Infos -->
+                  <div class="text-center mb-3">
+                    <h6 class="fw-bold mb-1">{{ typeShift.label }}</h6>
+                    <span class="badge bg-secondary">{{ typeShift.code }}</span>
+                    <span class="badge bg-info ms-1">{{ getCategoryLabel(typeShift.category) }}</span>
+                  </div>
+
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="small text-muted">Ordre:</span>
+                      <span class="fw-semibold">{{ typeShift.order }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span class="small text-muted">Couleur:</span>
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="color-preview" [style.background-color]="typeShift.color"></div>
+                        <span class="small fw-semibold">{{ typeShift.color }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Actions -->
+                  <div class="d-flex gap-2 mb-2">
+                    <button 
+                      class="btn btn-sm btn-light"
+                      (click)="moveUp(typeShift)"
+                      [disabled]="i === 0"
+                      title="Monter">
+                      <i class="bi bi-arrow-up"></i>
+                    </button>
+                    <button 
+                      class="btn btn-sm btn-light"
+                      (click)="moveDown(typeShift)"
+                      [disabled]="i === typeShifts.length - 1"
+                      title="Descendre">
+                      <i class="bi bi-arrow-down"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary flex-fill" (click)="openEditModal(typeShift)">
+                      <i class="bi bi-pencil me-1"></i>Modifier
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="deleteTypeShift(typeShift)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+@if (showModal) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi" [class.bi-plus-circle]="modalMode === 'create'" [class.bi-pencil-square]="modalMode === 'edit'" class="me-2"></i>
+            {{ modalMode === 'create' ? 'Créer un type de shift' : 'Modifier le type de shift' }}
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form>
+            <div class="row">
+              <div class="col-md-8 mb-3">
+                <label class="form-label fw-semibold">Libellé <span class="text-danger">*</span></label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  [(ngModel)]="formLabel" 
+                  name="label"
+                  (blur)="generateShortLabel(); generateCode()"
+                  placeholder="Ex: Sur Site" 
+                  required>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label fw-semibold">Ordre <span class="text-danger">*</span></label>
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  [(ngModel)]="formOrder" 
+                  name="order"
+                  min="1" 
+                  required>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Libellé court <span class="text-danger">*</span></label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  [(ngModel)]="formShortLabel"
+                  name="shortLabel" 
+                  placeholder="Ex: Sur..."
+                  maxlength="10" 
+                  required>
+                <small class="form-text text-muted">Max 10 caractères</small>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Catégorie <span class="text-danger">*</span></label>
+                <select 
+                  class="form-select" 
+                  [(ngModel)]="formCategory"
+                  name="category"
+                  required>
+                  <option [value]="ShiftCategory.Travail">✅ Travail</option>
+                  <option [value]="ShiftCategory.Absence">❌ Absence</option>
+                  <option [value]="ShiftCategory.Conge">🏖️ Congé</option>
+                </select>
+                <small class="form-text text-muted">Pour calculer les statistiques</small>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Code <span class="text-danger">*</span></label>
+              <input 
+                type="text" 
+                class="form-control" 
+                [(ngModel)]="formCode"
+                name="code" 
+                placeholder="Ex: SUR_SITE"
+                style="text-transform: uppercase;" 
+                required>
+              <small class="form-text text-muted">Identifiant unique (lettres, chiffres et _)</small>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Sélectionner une couleur prédéfinie</label>
+              <div class="row g-2">
+                @for (preset of predefinedColors; track preset.name) {
+                  <div class="col-4 col-md-3 col-lg-2">
+                    <button 
+                      type="button"
+                      class="btn w-100 color-preset-btn"
+                      [class.active]="selectedColorPreset === preset"
+                      (click)="selectColorPreset(preset)">
+                      <div class="preset-badge mb-1" [ngClass]="[preset.bg, preset.border, preset.text]">
+                        {{ preset.name.substring(0, 3) }}
+                      </div>
+                      <small class="d-block">{{ preset.name }}</small>
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Couleur personnalisée</label>
+              <div class="row g-2">
+                <div class="col-auto">
+                  <input 
+                    type="color" 
+                    class="form-control form-control-color" 
+                    [(ngModel)]="formColor"
+                    name="color"
+                    (input)="onCustomColorChange()"
+                    title="Choisir une couleur">
+                </div>
+                <div class="col">
+                  <input 
+                    type="text" 
+                    class="form-control" 
+                    [(ngModel)]="formColor"
+                    name="colorText"
+                    (input)="onCustomColorChange()"
+                    placeholder="#000000">
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label class="form-label fw-semibold">Classe Background</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  [(ngModel)]="formBgColor"
+                  name="bgColor" 
+                  placeholder="bg-green-200">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label fw-semibold">Classe Border</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  [(ngModel)]="formBorderColor"
+                  name="borderColor" 
+                  placeholder="border-green-400">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label fw-semibold">Classe Text</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  [(ngModel)]="formTextColor"
+                  name="textColor" 
+                  placeholder="text-green-900">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Aperçu</label>
+              <div class="text-center p-4 bg-light rounded">
+                <div class="preview-badge d-inline-flex align-items-center justify-content-center"
+                     [ngClass]="[formBgColor, formBorderColor, formTextColor]"
+                     [style]="getPreviewStyle()">
+                  {{ formShortLabel || 'Aperçu' }}
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light" (click)="closeModal()">Annuler</button>
+          <button 
+            type="button" 
+            class="btn btn-primary px-4" 
+            (click)="saveTypeShift()"
+            [disabled]="!validateForm()">
+            <i class="bi bi-check-circle me-2"></i>{{ modalMode === 'create' ? 'Créer' : 'Enregistrer' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

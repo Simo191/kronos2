@@ -1,0 +1,589 @@
+<div class="container-fluid px-4 py-4 suivi-page">
+
+  <!-- EN-TÊTE -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1">
+        <i class="bi bi-receipt-cutoff me-2 text-primary"></i>Suivi des commandes
+      </h1>
+      <p class="text-muted mb-0">Commandes par logiciel : tranches ferme / option, répartition par année et reste à consommer</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-secondary"
+                [class.active]="viewMode === 'list'" (click)="toggleViewMode('list')">
+          <i class="bi bi-list-ul"></i> Liste
+        </button>
+        <button type="button" class="btn btn-outline-secondary"
+                [class.active]="viewMode === 'cards'" (click)="toggleViewMode('cards')">
+          <i class="bi bi-grid-3x3-gap-fill"></i> Cartes
+        </button>
+      </div>
+      <button class="btn btn-success" (click)="exportExcel()" [disabled]="isLoading || !groupes.length">
+        <i class="bi bi-file-earmark-excel me-1"></i>Export Excel
+      </button>
+    </div>
+  </div>
+
+  <!-- CARTES STATISTIQUES -->
+  @if (!isLoading && totalGeneral) {
+    <div class="row g-3 mb-4">
+      <div class="col-xl col-md-4 col-sm-6 col-12">
+        <div class="card border-0 shadow-sm stat-card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-primary-subtle"><i class="bi bi-check2-square text-primary"></i></div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ totalFerme?.montantTotal | formatMontant }}</h3>
+                <p class="text-muted mb-0 small">COMMANDES FERMES</p>
+                <small class="text-muted">{{ formatJours(totalFerme?.jours ?? 0) }} jours</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl col-md-4 col-sm-6 col-12">
+        <div class="card border-0 shadow-sm stat-card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-danger-subtle"><i class="bi bi-hourglass-split text-danger"></i></div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold text-danger">{{ totalOption?.montantTotal | formatMontant }}</h3>
+                <p class="text-muted mb-0 small">OPTIONS</p>
+                <small class="text-muted">{{ formatJours(totalOption?.jours ?? 0) }} jours</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl col-md-4 col-sm-6 col-12">
+        <div class="card border-0 shadow-sm stat-card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-warning-subtle"><i class="bi bi-speedometer2 text-warning"></i></div>
+              <div class="ms-3 flex-grow-1">
+                <h3 class="mb-0 fw-bold">{{ totalGeneral.montantConsomme | formatMontant }}</h3>
+                <p class="text-muted mb-0 small">CONSOMMÉ · {{ pourcentageConsomme(totalGeneral) }} %</p>
+                <div class="progress mt-1" style="height: 5px;">
+                  <div class="progress-bar" [ngClass]="classeConsommation(totalGeneral)"
+                       [style.width.%]="pourcentageConsomme(totalGeneral) > 100 ? 100 : pourcentageConsomme(totalGeneral)"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl col-md-6 col-sm-6 col-12">
+        <div class="card border-0 shadow-sm stat-card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-success-subtle"><i class="bi bi-wallet2 text-success"></i></div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold text-success">{{ totalGeneral.montantRestant | formatMontant }}</h3>
+                <p class="text-muted mb-0 small">RESTE À CONSOMMER</p>
+                <small class="text-muted">{{ formatJours(totalGeneral.joursRestants) }} jours</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl col-md-6 col-12">
+        <div class="card border-0 shadow-sm stat-card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-info-subtle"><i class="bi bi-grid-3x3-gap text-info"></i></div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ data.applications.length - logicielsVides.length }}<span class="text-muted fs-6"> / {{ data.applications.length }}</span></h3>
+                <p class="text-muted mb-0 small">LOGICIELS AVEC COMMANDE</p>
+                @if (nbLogicielsAConfirmer > 0) {
+                  <small class="text-warning-emphasis fw-semibold">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ nbLogicielsAConfirmer }} à confirmer
+                  </small>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- LISTE / CARTES -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+
+      <!-- FILTRES : ligne 1 = critères, ligne 2 = interrupteurs -->
+      <div class="p-3 border-bottom bg-light">
+        <div class="row g-3 align-items-center">
+          <div class="col-lg-4 col-md-6 col-12">
+            <div class="input-group">
+              <span class="input-group-text bg-white border-end-0">
+                <i class="bi bi-search text-muted"></i>
+              </span>
+              <input type="text" class="form-control border-start-0 ps-0"
+                     placeholder="Prestataire, n° commande, CTR…"
+                     [(ngModel)]="searchTerm" (ngModelChange)="recalculer()">
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6 col-12">
+            <select class="form-select" [(ngModel)]="filterApplication" (ngModelChange)="recalculer()">
+              <option value="">Tous les logiciels</option>
+              @for (a of applicationsTriees; track a.id) {
+                <option [value]="a.id">{{ a.nom }}</option>
+              }
+              <option value="aucun">Sans logiciel</option>
+            </select>
+          </div>
+          <div class="col-lg-3 col-md-6 col-12">
+            <select class="form-select" [(ngModel)]="filterEntreprise" (ngModelChange)="recalculer()">
+              <option value="">Toutes les sociétés</option>
+              @for (e of entreprises; track e) {
+                <option [value]="e">{{ e }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-lg-2 col-md-6 col-12">
+            <select class="form-select" [(ngModel)]="filterTranche" (ngModelChange)="recalculer()">
+              <option value="">Ferme + option</option>
+              <option value="Ferme">Ferme</option>
+              <option value="Option">Option</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+          <div class="d-flex flex-wrap align-items-center gap-4">
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" id="masquerTerminees"
+                     [(ngModel)]="masquerTerminees" (ngModelChange)="recalculer()">
+              <label class="form-check-label" for="masquerTerminees">Masquer terminées</label>
+            </div>
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" id="logicielsVides"
+                     [(ngModel)]="afficherLogicielsVides">
+              <label class="form-check-label" for="logicielsVides">Logiciels sans commande</label>
+            </div>
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" id="consommation"
+                     [(ngModel)]="afficherConsommation">
+              <label class="form-check-label" for="consommation">Consommé / reste</label>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <small class="text-muted">{{ nbLignes }} commande(s) · {{ groupes.length }} logiciel(s)</small>
+            <button class="btn btn-sm btn-outline-secondary" (click)="resetFilters()">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>Réinitialiser
+            </button>
+          </div>
+        </div>
+      </div>
+
+      @if (isLoading) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+        </div>
+      } @else if (!groupes.length) {
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-inbox display-4 d-block mb-2"></i>
+          Aucune commande ne correspond aux filtres.
+        </div>
+      } @else if (viewMode === 'list') {
+
+        <!-- ===================== VUE LISTE ===================== -->
+        <div class="table-responsive">
+          <table class="table align-middle mb-0 suivi-table">
+            <thead class="table-light">
+              <tr>
+                <th class="text-uppercase small fw-semibold text-muted">Prestataire</th>
+                <th class="text-uppercase small fw-semibold text-muted">Commande</th>
+                <th class="text-uppercase small fw-semibold text-muted text-end">TJM / Jours</th>
+                @for (annee of annees; track annee) {
+                  <th class="text-uppercase small fw-semibold text-end th-annee">{{ annee }}</th>
+                }
+                <th class="text-uppercase small fw-semibold text-muted text-end">Total</th>
+                @if (afficherConsommation) {
+                  <th class="text-uppercase small fw-semibold text-muted th-conso">Consommé</th>
+                  <th class="text-uppercase small fw-semibold text-muted text-end">Reste</th>
+                }
+              </tr>
+            </thead>
+
+            @for (g of groupes; track g.cle) {
+              <tbody>
+                <tr class="groupe-row" (click)="toggleGroupe(g.cle)">
+                  <td [attr.colspan]="nbColonnesEcran" [style.border-left-color]="g.couleur">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="bi text-muted" [class.bi-chevron-right]="estReplie(g.cle)" [class.bi-chevron-down]="!estReplie(g.cle)"></i>
+                        <span class="logiciel-badge" [style.background]="g.couleur">{{ g.nom }}</span>
+                        <span class="group-count" [style.background]="g.couleur">{{ g.lignes.length }}</span>
+                        @if (g.statut) {
+                          <span class="badge rounded-pill statut-badge">{{ g.statut }}</span>
+                        }
+                      </div>
+                      <div class="small text-nowrap">
+                        Total <strong>{{ g.montantTotal | formatMontant }}</strong>
+                        @if (afficherConsommation) {
+                          <span class="text-muted mx-2">|</span>Reste <strong class="text-success">{{ g.montantRestant | formatMontant }}</strong>
+                        }
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                @if (!estReplie(g.cle)) {
+                  @for (l of g.lignes; track l.contratId) {
+                    <tr class="ligne" [class.ligne-option]="l.tranche === 'Option'" [class.ligne-terminee]="estTerminee(l)">
+                      <td>
+                        <div class="d-flex align-items-center gap-2">
+                          <div class="suivi-avatar">
+                            @if (getAvatarUrl(l)) {
+                              <img [src]="getAvatarUrl(l)!" [alt]="l.prestataireNom" (error)="l.prestataireImageUrl = null">
+                            } @else {
+                              {{ getInitiales(l.prestataireNom) }}
+                            }
+                          </div>
+                          <div class="lh-sm">
+                            <div class="fw-semibold text-nowrap">
+                              {{ l.prestataireNom }}
+                              @if (!l.prestataireActif) {
+                                <i class="bi bi-slash-circle text-muted ms-1" title="Collaborateur désactivé"></i>
+                              }
+                            </div>
+                            @if (getEntrepriseLabel(l)) {
+                              <span class="badge-entreprise"><i class="bi bi-building me-1"></i>{{ getEntrepriseLabel(l) }}</span>
+                            }
+                          </div>
+                        </div>
+                      </td>
+                      <td class="cell-commande">
+                        <div class="d-flex flex-wrap align-items-center gap-1">
+                          <span class="tranche-pill" [class.tranche-option]="l.tranche === 'Option'">{{ l.tranche === 'Option' ? 'Option' : 'Ferme' }}</span>
+                          @if (l.numeroCommande) {
+                            <span class="fw-semibold text-nowrap">N° {{ l.numeroCommande }}</span>
+                          } @else {
+                            <span class="text-muted fst-italic small">N° non renseigné</span>
+                          }
+                          @if (!l.active) {
+                            <span class="badge bg-secondary-subtle text-secondary" title="Contrat inactif (ignoré par la génération des jours)">inactif</span>
+                          }
+                        </div>
+                        <div class="small text-muted periode">
+                          <i class="bi bi-calendar3 me-1"></i>{{ moisCourt(l.dateDebut) }} → {{ moisCourt(l.dateFin) }}
+                          @if (l.referenceCtr) { <span class="mx-1">·</span>{{ l.referenceCtr }} }
+                        </div>
+                        <ng-container [ngTemplateOutlet]="blocLogiciel" [ngTemplateOutletContext]="{ $implicit: l }"></ng-container>
+                        @if (l.commentaire) {
+                          <div class="commentaire"><i class="bi bi-chat-left-text me-1"></i>{{ l.commentaire }}</div>
+                        }
+                      </td>
+                      <td class="text-end">
+                        <div class="text-nowrap">{{ l.tjm | formatMontant }}/j</div>
+                        <div class="jours">{{ formatJours(l.nombreJours) }} j</div>
+                      </td>
+                      @for (annee of annees; track annee) {
+                        <td class="text-end cell-annee" [title]="infoAnnee(l, annee)">
+                          @if (getAnnee(l, annee).montantPrevu) {
+                            <div class="montant">{{ getAnnee(l, annee).montantPrevu | formatMontant }}</div>
+                            <div class="jours">{{ formatJours(getAnnee(l, annee).joursPrevus) }} j</div>
+                          } @else {
+                            <span class="vide">—</span>
+                          }
+                        </td>
+                      }
+                      <td class="text-end cell-total">
+                        <div class="montant">{{ l.montantTotal | formatMontant }}</div>
+                        @if (l.repartitionAuto) {
+                          <div class="jours" title="Répartition par année calculée automatiquement"><i class="bi bi-magic me-1"></i>auto</div>
+                        }
+                      </td>
+                      @if (afficherConsommation) {
+                        <td class="cell-conso">
+                          <div class="d-flex justify-content-between small">
+                            <span>{{ l.montantConsomme | formatMontant }}</span>
+                            <span class="text-muted">{{ pourcentageConsomme(l) }} %</span>
+                          </div>
+                          <div class="progress" style="height: 6px;">
+                            <div class="progress-bar" [ngClass]="classeConsommation(l)"
+                                 [style.width.%]="pourcentageConsomme(l) > 100 ? 100 : pourcentageConsomme(l)"></div>
+                          </div>
+                          <div class="jours">{{ formatJours(l.joursConsommes) }} j</div>
+                        </td>
+                        <td class="text-end">
+                          <div class="montant" [class.text-danger]="l.montantRestant < 0">{{ l.montantRestant | formatMontant }}</div>
+                          <div class="jours" [class.text-danger]="l.joursRestants < 0">{{ formatJours(l.joursRestants) }} j</div>
+                        </td>
+                      }
+                    </tr>
+                  }
+                }
+              </tbody>
+            }
+
+            <tfoot>
+              @for (t of totaux; track t.libelle) {
+                <tr [class]="t.classe">
+                  <td colspan="3" class="fw-bold">{{ t.libelle }}</td>
+                  @for (a of t.annees; track a.annee) {
+                    <td class="text-end">
+                      @if (a.montant) {
+                        <div class="montant">{{ a.montant | formatMontant }}</div>
+                        <div class="jours">{{ formatJours(a.jours) }} j</div>
+                      }
+                    </td>
+                  }
+                  <td class="text-end"><div class="montant">{{ t.montantTotal | formatMontant }}</div></td>
+                  @if (afficherConsommation) {
+                    <td>
+                      <div class="montant">{{ t.montantConsomme | formatMontant }}</div>
+                      <div class="jours">{{ formatJours(t.joursConsommes) }} j</div>
+                    </td>
+                    <td class="text-end">
+                      <div class="montant">{{ t.montantRestant | formatMontant }}</div>
+                      <div class="jours">{{ formatJours(t.joursRestants) }} j</div>
+                    </td>
+                  }
+                </tr>
+              }
+            </tfoot>
+          </table>
+        </div>
+
+      } @else {
+
+        <!-- ===================== VUE CARTES ===================== -->
+        <div class="p-3">
+          @for (g of groupes; track g.cle) {
+            <div class="groupe-section mb-3" [style.border-left-color]="g.couleur" (click)="toggleGroupe(g.cle)">
+              <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 w-100">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="logiciel-badge" [style.background]="g.couleur">{{ g.nom }}</span>
+                  <span class="group-count" [style.background]="g.couleur">{{ g.lignes.length }}</span>
+                  @if (g.statut) {
+                    <span class="badge rounded-pill statut-badge">{{ g.statut }}</span>
+                  }
+                </div>
+                <div class="d-flex align-items-center gap-3 small">
+                  <span>Total <strong>{{ g.montantTotal | formatMontant }}</strong></span>
+                  @if (afficherConsommation) {
+                    <span>Reste <strong class="text-success">{{ g.montantRestant | formatMontant }}</strong></span>
+                  }
+                  <i class="bi" [class.bi-chevron-right]="estReplie(g.cle)" [class.bi-chevron-down]="!estReplie(g.cle)"></i>
+                </div>
+              </div>
+            </div>
+
+            @if (!estReplie(g.cle)) {
+              <div class="row g-3 mb-4">
+                @for (l of g.lignes; track l.contratId) {
+                  <div class="col-md-6 col-xxl-4">
+                    <div class="card border-0 shadow-sm h-100 commande-card"
+                         [class.card-option]="l.tranche === 'Option'"
+                         [class.card-terminee]="estTerminee(l)">
+                      <div class="card-body p-3">
+
+                        <!-- En-tête : prestataire + tranche -->
+                        <div class="d-flex align-items-start justify-content-between mb-3">
+                          <div class="d-flex align-items-center gap-2">
+                            <div class="suivi-avatar suivi-avatar-lg">
+                              @if (getAvatarUrl(l)) {
+                                <img [src]="getAvatarUrl(l)!" [alt]="l.prestataireNom" (error)="l.prestataireImageUrl = null">
+                              } @else {
+                                {{ getInitiales(l.prestataireNom) }}
+                              }
+                            </div>
+                            <div>
+                              <h6 class="mb-0 fw-bold">
+                                {{ l.prestataireNom }}
+                                @if (!l.prestataireActif) {
+                                  <i class="bi bi-slash-circle text-muted ms-1" title="Collaborateur désactivé"></i>
+                                }
+                              </h6>
+                              <div class="d-flex flex-wrap gap-1 mt-1">
+                                @if (getEntrepriseLabel(l)) {
+                                  <span class="badge-entreprise"><i class="bi bi-building me-1"></i>{{ getEntrepriseLabel(l) }}</span>
+                                }
+                                @if (!l.active) {
+                                  <span class="badge bg-secondary-subtle text-secondary">inactif</span>
+                                }
+                                @if (estTerminee(l)) {
+                                  <span class="badge bg-light text-muted border">terminée</span>
+                                }
+                              </div>
+                            </div>
+                          </div>
+                          <span class="tranche-pill" [class.tranche-option]="l.tranche === 'Option'">{{ l.tranche === 'Option' ? 'Option' : 'Ferme' }}</span>
+                        </div>
+
+                        <!-- Commande -->
+                        <div class="infos-commande mb-3">
+                          <div><i class="bi bi-receipt"></i>
+                            @if (l.numeroCommande) { <span class="fw-semibold">N° {{ l.numeroCommande }}</span> }
+                            @else { <span class="text-muted fst-italic">N° non renseigné</span> }
+                          </div>
+                          @if (l.referenceCtr) {
+                            <div><i class="bi bi-file-earmark-text"></i><span>{{ l.referenceCtr }}</span></div>
+                          }
+                          <div><i class="bi bi-calendar3"></i><span>{{ moisCourt(l.dateDebut) }} → {{ moisCourt(l.dateFin) }}</span></div>
+                          <div><i class="bi bi-currency-euro"></i><span>{{ l.tjm | formatMontant }}/j · {{ formatJours(l.nombreJours) }} jours</span></div>
+                        </div>
+
+                        <!-- Montant + répartition par année -->
+                        <div class="d-flex justify-content-between align-items-end mb-2">
+                          <div>
+                            <div class="small text-muted">Montant de la commande</div>
+                            <div class="montant-principal">{{ l.montantTotal | formatMontant }}</div>
+                          </div>
+                          @if (l.repartitionAuto) {
+                            <span class="small text-muted" title="Répartition par année calculée automatiquement"><i class="bi bi-magic me-1"></i>auto</span>
+                          }
+                        </div>
+                        <div class="d-flex flex-wrap gap-1 mb-3">
+                          @for (a of anneesPrevues(l); track a.annee) {
+                            <span class="annee-chip" [title]="infoAnnee(l, a.annee)">
+                              <strong>{{ a.annee }}</strong> {{ a.montantPrevu | formatMontant }}
+                              <span class="text-muted">· {{ formatJours(a.joursPrevus) }} j</span>
+                            </span>
+                          }
+                        </div>
+
+                        <!-- Consommation -->
+                        @if (afficherConsommation) {
+                          <div class="conso-bloc mb-2">
+                            <div class="d-flex justify-content-between small mb-1">
+                              <span>Consommé <strong>{{ l.montantConsomme | formatMontant }}</strong></span>
+                              <span class="text-muted">{{ pourcentageConsomme(l) }} %</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                              <div class="progress-bar" [ngClass]="classeConsommation(l)"
+                                   [style.width.%]="pourcentageConsomme(l) > 100 ? 100 : pourcentageConsomme(l)"></div>
+                            </div>
+                            <div class="d-flex justify-content-between small mt-1">
+                              <span class="text-muted">{{ formatJours(l.joursConsommes) }} j consommés</span>
+                              <span>Reste <strong [class.text-success]="l.montantRestant >= 0" [class.text-danger]="l.montantRestant < 0">{{ l.montantRestant | formatMontant }}</strong>
+                                <span class="text-muted"> · {{ formatJours(l.joursRestants) }} j</span></span>
+                            </div>
+                          </div>
+                        }
+
+                        <!-- Logiciel + commentaire -->
+                        <div class="pt-2 border-top">
+                          <ng-container [ngTemplateOutlet]="blocLogiciel" [ngTemplateOutletContext]="{ $implicit: l }"></ng-container>
+                          @if (l.commentaire) {
+                            <div class="commentaire"><i class="bi bi-chat-left-text me-1"></i>{{ l.commentaire }}</div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          }
+
+          <!-- Totaux par année (ferme / option séparés) -->
+          <div class="recap-annees mt-2">
+            <div class="fw-semibold small text-muted text-uppercase mb-2">Totaux par année</div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Année</th>
+                    <th class="text-end">Ferme</th>
+                    <th class="text-end">Option</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">Jours</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of recapAnnees; track r.annee) {
+                    <tr>
+                      <td class="fw-semibold">{{ r.annee }}</td>
+                      <td class="text-end">{{ r.ferme | formatMontant }}</td>
+                      <td class="text-end text-danger">{{ r.option | formatMontant }}</td>
+                      <td class="text-end fw-bold">{{ r.total | formatMontant }}</td>
+                      <td class="text-end text-muted">{{ formatJours(r.jours) }} j</td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr class="fw-bold">
+                    <td>Total</td>
+                    <td class="text-end">{{ totalFerme?.montantTotal | formatMontant }}</td>
+                    <td class="text-end text-danger">{{ totalOption?.montantTotal | formatMontant }}</td>
+                    <td class="text-end">{{ totalGeneral?.montantTotal | formatMontant }}</td>
+                    <td class="text-end text-muted">{{ formatJours(totalGeneral?.jours ?? 0) }} j</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- LOGICIELS SANS COMMANDE -->
+  @if (!isLoading && afficherLogicielsVides && logicielsVides.length && !filterApplication) {
+    <div class="card border-0 shadow-sm mt-3">
+      <div class="card-body py-3">
+        <div class="small fw-semibold text-muted mb-2">
+          <i class="bi bi-dash-circle me-1"></i>Logiciels sans commande ({{ logicielsVides.length }})
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          @for (a of logicielsVides; track a.id) {
+            <span class="logiciel-chip"><span class="pastille" [style.background]="a.couleur"></span>{{ a.nom }}</span>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- LÉGENDE -->
+  <div class="d-flex flex-wrap gap-3 mt-3 small text-muted">
+    <span><span class="tranche-pill me-1">Ferme</span>tranche ferme</span>
+    <span><span class="tranche-pill tranche-option me-1">Option</span>tranche optionnelle</span>
+    <span><i class="bi bi-diagram-3 me-1"></i>logiciel déduit du planning</span>
+    <span><i class="bi bi-pin-angle-fill me-1"></i>logiciel choisi dans le contrat</span>
+    <span><i class="bi bi-magic me-1"></i>répartition automatique</span>
+  </div>
+</div>
+
+<!-- Logiciel de la commande : confirmer / changer (commun liste + cartes) -->
+<ng-template #blocLogiciel let-l>
+  @if (logicielAConfirmer(l)) {
+    <button type="button" class="btn btn-link btn-sm p-0 lien-confirmer" (click)="ouvrirChoixLogiciel(l)"
+            [title]="'Prestataire affecté à ' + l.logicielsPlanning.length + ' logiciels dans le planning'">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i>Logiciel à confirmer
+    </button>
+  } @else {
+    <button type="button" class="btn btn-link btn-sm p-0 lien-changer" (click)="ouvrirChoixLogiciel(l)"
+            [title]="l.applicationSource === 'contrat' ? 'Logiciel choisi dans le contrat' : 'Logiciel déduit du planning'">
+      <i class="bi me-1" [class.bi-pin-angle-fill]="l.applicationSource === 'contrat'"
+         [class.bi-diagram-3]="l.applicationSource !== 'contrat'"></i>Changer de logiciel
+    </button>
+  }
+  @if (editionLogicielId === l.contratId) {
+    <select class="form-select form-select-sm mt-1" [disabled]="enregistrementLogiciel"
+            (change)="choisirLogiciel(l, $any($event.target).value === '__planning__' ? '' : $any($event.target).value)">
+      <option value="" disabled selected>Choisir le logiciel…</option>
+      @if (l.logicielsPlanning.length) {
+        <optgroup label="Affecté dans le planning">
+          @for (a of l.logicielsPlanning; track a.id) {
+            <option [value]="a.id">{{ a.nom }}</option>
+          }
+        </optgroup>
+      }
+      <optgroup label="Autres logiciels">
+        @for (a of autresLogiciels(l); track a.id) {
+          <option [value]="a.id">{{ a.nom }}</option>
+        }
+      </optgroup>
+      @if (l.applicationSource === 'contrat') {
+        <option value="__planning__">↺ Revenir au logiciel du planning</option>
+      }
+    </select>
+  }
+</ng-template>

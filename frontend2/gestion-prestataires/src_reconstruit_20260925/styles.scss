@@ -1,0 +1,186 @@
+@import "bootstrap/dist/css/bootstrap.min.css";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+ 
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+}
+// ── Fix hauteur Planning ──────────────────────────────────────────────────────
+// À ajouter dans styles.scss (global)
+// Permet à app-planning de remplir tout l'espace disponible
+
+div#content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+div.main-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 !important;  // supprimer le padding qui crée de l'espace blanc
+}
+
+app-planning {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.wrapper,
+#content,
+.main-content {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+ 
+// Cacher TOUTES les scrollbars webkit globalement sauf dans .gantt-scroll
+*:not(.gantt-scroll)::-webkit-scrollbar:vertical {
+  display: none !important;
+  width: 0 !important;
+}
+ 
+// La scrollbar horizontale du gantt reste visible
+.gantt-scroll::-webkit-scrollbar {
+  height: 6px !important;
+  width: 0 !important;
+}
+.gantt-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+/* =========================================================================
+   Badge global "Entreprise" — utilisé dans toutes les listes/cartes
+   (Contrats, Jours-travail, Shift planning…).
+   Violet doux pour se distinguer des badges fonctionnels (info/success/etc.)
+   ========================================================================= */
+.ent-tag {
+  background: #f3e8ff;
+  color: #6b21a8;
+  border: 1px solid #d8b4fe;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  i { font-size: 11px; flex-shrink: 0; }
+}
+
+/* =========================================================================
+   Marqueur d'inactivité — appliqué aux <option>, lignes liste, cartes…
+   pour signaler discrètement un prestataire désactivé sans casser la
+   mise en page.
+   ========================================================================= */
+.is-inactive-row,
+option.is-inactive-opt {
+  color: #94a3b8 !important;
+  font-style: italic;
+}
+
+/* Toggle "Inclure désactivés" — style switch iOS moderne. */
+.show-inactive-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+
+  /* On cache la checkbox native ; le switch visuel est dessiné via .toggle-track */
+  input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .toggle-track {
+    position: relative;
+    width: 34px;
+    height: 20px;
+    background: #cbd5e1;
+    border-radius: 999px;
+    flex-shrink: 0;
+    transition: background .2s ease;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 16px; height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+      transition: transform .2s ease;
+    }
+  }
+
+  i { font-size: 13px; color: #94a3b8; transition: color .15s; }
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  &.is-on {
+    background: #eef2ff;
+    border-color: #a5b4fc;
+    color: #4338ca;
+
+    .toggle-track {
+      background: #6366f1;
+      &::before { transform: translateX(14px); }
+    }
+    i { color: #6366f1; }
+  }
+}
+
+/* Prestataire / interne désactivé dans le tableau du shift planning :
+   ligne entière grisée avec un overlay diagonal subtil. */
+.shift-row-inactive {
+  opacity: 0.55;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(148, 163, 184, 0.04) 0,
+    rgba(148, 163, 184, 0.04) 8px,
+    rgba(148, 163, 184, 0.08) 8px,
+    rgba(148, 163, 184, 0.08) 16px
+  ) !important;
+
+  .prestataire-name {
+    color: #64748b !important;
+    text-decoration: line-through;
+    text-decoration-color: rgba(100, 116, 139, 0.4);
+  }
+
+  .prestataire-avatar,
+  .prestataire-avatar-img {
+    filter: grayscale(100%);
+  }
+
+  &:hover { opacity: 0.78; }
+}
+

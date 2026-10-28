@@ -1,0 +1,651 @@
+// =========================================
+// 🧱 COMPOSANTS RÉUTILISABLES - ARCHITECTURE CENTRALISÉE
+// =========================================
+
+@import 'variables';
+@import 'mixins';
+
+// ========== CONTAINER ==========
+
+.container-fluid {
+  background-color: $bg-body;
+  //min-height: 100vh;
+}
+
+// ========== AVATARS ==========
+
+.avatar-circle {
+  @include avatar($avatar-size-base);
+  font-size: 13px;
+}
+
+.avatar-circle-large {
+  @include avatar($avatar-size-md);
+}
+
+.avatar-circle-sm {
+  @include avatar($avatar-size-sm);
+  font-size: 11px;
+}
+
+.avatar-circle-xl {
+  @include avatar($avatar-size-xl);
+  font-size: 24px;
+}
+
+// ========== CARTES ==========
+
+.card {
+  @include card-base;
+}
+
+.stat-card {
+  @include card-hover;
+  
+  .card-body {
+    padding: $card-padding;
+  }
+}
+
+.stat-icon {
+  width: $stat-icon-size;
+  height: $stat-icon-size;
+  border-radius: $stat-icon-radius;
+  @include flex-center;
+  font-size: $icon-size-md;
+  flex-shrink: 0;
+}
+
+// ========== BADGES ==========
+
+.badge {
+  font-weight: $font-weight-medium;
+  padding: $badge-padding-y $badge-padding-x;
+  border-radius: $badge-radius;
+  font-size: $badge-font-size;
+  
+  &.bg-primary-subtle {
+    @include badge(#e3f2fd, #1976d2);
+  }
+  
+  &.bg-success {
+    @include badge($success, $white);
+    border: none;
+  }
+  
+  &.bg-success-subtle {
+    @include badge($success-subtle, $success);
+  }
+  
+  &.bg-info {
+    @include badge($info, $white);
+  }
+  
+  &.bg-info-subtle {
+    @include badge($info-subtle, $info);
+  }
+  
+  &.bg-warning {
+    @include badge($warning, $white);
+  }
+  
+  &.bg-warning-subtle {
+    @include badge($warning-subtle, $warning);
+  }
+  
+  &.bg-danger {
+    @include badge($danger, $white);
+  }
+  
+  &.bg-danger-subtle {
+    @include badge($danger-subtle, $danger);
+  }
+}
+
+// ========== BOUTONS ==========
+
+.btn {
+  @include button-base;
+}
+
+.btn-primary {
+  @include button-hover($primary, $primary-dark, $shadow-hover);
+  color: $white;
+}
+
+.btn-secondary {
+  @include button-hover($secondary, $secondary-dark);
+  color: $white;
+}
+
+.btn-success {
+  @include button-hover($success, $success-light);
+  color: $white;
+}
+
+.btn-danger {
+  @include button-hover($danger, $danger-light);
+  color: $white;
+}
+
+.btn-warning {
+  @include button-hover($warning, $warning-light);
+  color: $white;
+}
+
+.btn-light {
+  background-color: $gray-100;
+  border: 1px solid $border-color;
+  color: $gray-900;
+  
+  &:hover:not(:disabled) {
+    background-color: $gray-200;
+    border-color: $border-dark;
+  }
+}
+
+.btn-outline-primary {
+  background-color: transparent;
+  border: 1px solid $primary;
+  color: $primary;
+  
+  &:hover:not(:disabled) {
+    background-color: $primary;
+    color: $white;
+  }
+}
+
+.btn-outline-secondary {
+  background-color: transparent;
+  border: 1px solid $border-color;
+  color: $secondary-dark;
+  
+  &:hover:not(:disabled) {
+    background-color: $gray-100;
+    border-color: $border-dark;
+    color: $gray-900;
+  }
+  
+  &.active {
+    background-color: $primary;
+    border-color: $primary;
+    color: $white;
+  }
+}
+
+.btn-outline-danger {
+  background-color: transparent;
+  border: 1px solid $danger;
+  color: $danger;
+  
+  &:hover:not(:disabled) {
+    background-color: $danger;
+    color: $white;
+  }
+}
+
+.btn-sm {
+  padding: $btn-padding-y-sm $btn-padding-x-sm;
+  border-radius: $btn-radius-sm;
+  font-size: $font-size-sm;
+  
+  &.btn-light {
+    i {
+      font-size: $font-size-sm;
+    }
+  }
+}
+
+// Button groups
+.btn-group {
+  .btn-outline-secondary {
+    &.active {
+      background-color: $primary;
+      border-color: $primary;
+      color: $white;
+      
+      i {
+        color: $white;
+      }
+    }
+    
+    i {
+      font-size: $font-size-xs;
+      opacity: 0.7;
+    }
+    
+    &:hover i {
+      opacity: 1;
+    }
+  }
+}
+
+// ========== FORMULAIRES ==========
+
+.form-control,
+.form-select {
+  @include input-base;
+}
+
+.form-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-position: right $input-padding-x center;
+  background-size: 16px 12px;
+  padding-right: 2.5rem;
+  background-repeat: no-repeat;
+}
+
+.form-label {
+  font-weight: $font-weight-medium;
+  color: $gray-900;
+  margin-bottom: $spacing-sm;
+  font-size: $font-size-base;
+}
+
+.form-check-input {
+  &:checked {
+    background-color: $primary;
+    border-color: $primary;
+  }
+  
+  &:focus {
+    border-color: $primary;
+    box-shadow: $input-focus-shadow;
+  }
+}
+
+// Input groups
+.input-group {
+  .input-group-text {
+    background-color: $white;
+    border: 1px solid $border-color;
+    border-right: 0;
+    border-radius: $radius-md 0 0 $radius-md;
+    padding: $input-padding-y $input-padding-x;
+  }
+  
+  .form-control {
+    border-left: 0;
+    border-radius: 0 $radius-md $radius-md 0;
+    
+    &:focus {
+      border-color: $border-color;
+      box-shadow: none;
+    }
+  }
+}
+
+// ========== TABLES ==========
+
+.table {
+  @include table-base;
+}
+
+.table-responsive {
+  @include scrollbar;
+}
+
+// ========== PAGINATION ==========
+
+.pagination {
+  gap: $pagination-gap;
+  
+  .page-item {
+    .page-link {
+      border: 1px solid $border-color;
+      border-radius: $pagination-radius;
+      color: $gray-900;
+      padding: $pagination-padding-y $pagination-padding-x;
+      font-weight: $font-weight-medium;
+      transition: $transition-base;
+      
+      &:hover {
+        background-color: $gray-100;
+        border-color: $border-dark;
+      }
+      
+      &:focus {
+        box-shadow: none;
+      }
+    }
+    
+    &.active .page-link {
+      background-color: $primary;
+      border-color: $primary;
+      color: $white;
+    }
+    
+    &.disabled .page-link {
+      background-color: $gray-50;
+      border-color: $border-color;
+      color: $gray-500;
+    }
+  }
+}
+
+// ========== MODALS ==========
+
+.modal {
+  background-color: $modal-backdrop;
+  
+  .modal-dialog {
+    max-width: $modal-max-width;
+  }
+  
+  @include modal-base;
+  
+  .modal-header {
+    &.bg-primary {
+      background-color: $primary !important;
+      color: $white;
+    }
+    
+    &.bg-danger {
+      background-color: $danger !important;
+      color: $white;
+    }
+    
+    .modal-title {
+      font-weight: $font-weight-semibold;
+      font-size: $font-size-xl;
+    }
+    
+    .btn-close-white {
+      filter: brightness(0) invert(1);
+    }
+  }
+  
+  .modal-footer {
+    &.bg-light {
+      background-color: $gray-50 !important;
+    }
+  }
+}
+
+// ========== ALERTS ==========
+
+.alert {
+  border-radius: $radius-base;
+  border: none;
+  padding: $spacing-base $spacing-lg;
+  
+  &.alert-success {
+    background-color: $success-bg;
+    color: $success-text;
+  }
+  
+  &.alert-danger {
+    background-color: $danger-bg;
+    color: $danger-text;
+  }
+  
+  &.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+  }
+  
+  &.alert-info {
+    background-color: #cff4fc;
+    color: #055160;
+  }
+}
+
+// ========== DROPDOWNS ==========
+
+.dropdown {
+  position: relative;
+  
+  .btn {
+    padding: $spacing-xs $spacing-sm;
+    line-height: 1;
+    
+    i {
+      font-size: $font-size-xl;
+      color: $gray-700;
+    }
+    
+    &:hover i {
+      color: $gray-800;
+    }
+  }
+  
+  .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: $z-dropdown;
+    display: none;
+    min-width: $dropdown-min-width;
+    padding: $dropdown-padding;
+    margin: 0.125rem 0 0;
+    font-size: $font-size-base;
+    color: $text-primary;
+    background-color: $white;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: $dropdown-radius;
+    box-shadow: $dropdown-shadow;
+    
+    &.show {
+      display: block;
+    }
+    
+    .dropdown-item {
+      @include flex-start;
+      width: 100%;
+      padding: $dropdown-item-padding-y $dropdown-item-padding-x;
+      clear: both;
+      font-weight: $font-weight-normal;
+      color: $text-primary;
+      text-align: inherit;
+      white-space: nowrap;
+      background-color: transparent;
+      border: 0;
+      cursor: pointer;
+      transition: $transition-base;
+      
+      i {
+        font-size: $icon-size-base;
+      }
+      
+      &:hover {
+        background-color: $gray-50;
+        color: $primary;
+      }
+      
+      &.text-danger {
+        color: $danger !important;
+        
+        &:hover {
+          background-color: #fff5f5;
+          color: darken($danger, 10%) !important;
+        }
+      }
+    }
+    
+    .dropdown-divider {
+      height: 0;
+      margin: $spacing-sm 0;
+      overflow: hidden;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+.dropdown-menu-end {
+  right: 0;
+  left: auto;
+}
+
+// ========== SPINNERS ==========
+
+.spinner-border {
+  @include spinner;
+  
+  &.text-primary {
+    @include spinner(40px, $primary);
+  }
+  
+  &.spinner-border-sm {
+    @include spinner(20px, $primary);
+  }
+}
+
+// ========== EMPTY STATE ==========
+
+.empty-state {
+  @include empty-state;
+}
+
+.text-center.py-5 {
+  i.bi-inbox {
+    opacity: 0.3;
+  }
+}
+
+// ========== SORTABLE (TRI) ==========
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: $transition-base;
+  position: relative;
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: $primary !important;
+  }
+  
+  &.sorted {
+    color: $primary !important;
+    font-weight: $font-weight-semibold;
+    
+    i {
+      color: $primary;
+      opacity: 1;
+    }
+  }
+  
+  i {
+    font-size: $font-size-xs;
+    opacity: 0.5;
+    transition: $transition-base;
+  }
+  
+  &:hover i {
+    opacity: 1;
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+// ========== BACKGROUNDS ==========
+
+.bg-light {
+  background-color: $bg-light !important;
+}
+
+.bg-primary {
+  background-color: $primary !important;
+}
+
+.bg-primary-subtle {
+  background-color: $primary-subtle !important;
+}
+
+.bg-success-subtle {
+  background-color: $success-subtle !important;
+}
+
+.bg-info-subtle {
+  background-color: $info-subtle !important;
+}
+
+.bg-warning-subtle {
+  background-color: $warning-subtle !important;
+}
+
+.bg-danger-subtle {
+  background-color: $danger-subtle !important;
+}
+
+// ========== TEXT COLORS ==========
+
+.text-primary {
+  color: $primary !important;
+}
+
+.text-success {
+  color: $success !important;
+}
+
+.text-info {
+  color: $info !important;
+}
+
+.text-warning {
+  color: $warning !important;
+}
+
+.text-danger {
+  color: $danger !important;
+}
+
+.text-muted {
+  color: $text-muted !important;
+}
+
+.text-secondary {
+  color: $text-secondary !important;
+}
+
+// ========== UTILITIES ==========
+
+.shadow-sm {
+  box-shadow: $shadow-sm !important;
+}
+
+.shadow-md {
+  box-shadow: $shadow-md !important;
+}
+
+.shadow-lg {
+  box-shadow: $shadow-lg !important;
+}
+
+// ========== RESPONSIVE UTILITIES ==========
+
+@include mobile-only {
+  .stat-card {
+    margin-bottom: $spacing-base;
+  }
+  
+  .table {
+    font-size: $font-size-sm;
+    
+    > thead > tr > th,
+    > tbody > tr > td {
+      padding: $spacing-md $spacing-base;
+    }
+  }
+  
+  .avatar-circle {
+    @include avatar($avatar-size-sm);
+    font-size: 11px;
+  }
+  
+  .avatar-circle-large {
+    @include avatar($avatar-size-base);
+    font-size: 14px;
+  }
+  
+  .badge {
+    padding: $spacing-xs $spacing-md;
+    font-size: 0.8125rem;
+  }
+  
+  .btn-sm {
+    padding: $spacing-xs $spacing-sm;
+  }
+}

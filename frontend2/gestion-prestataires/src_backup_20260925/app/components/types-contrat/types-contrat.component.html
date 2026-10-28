@@ -1,0 +1,303 @@
+<div class="container-fluid px-4 py-4">
+  
+  <!-- EN-TÊTE -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1">
+        <i class="bi bi-tag-fill me-2 text-primary"></i>Types de Contrat
+      </h1>
+      <p class="text-muted mb-0">Gérez les différents types de contrats</p>
+    </div>
+    <div class="d-flex gap-2">
+      <div class="btn-group" role="group">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          [class.active]="viewMode === 'list'"
+          (click)="toggleViewMode('list')">
+          <i class="bi bi-list-ul"></i> Liste
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          [class.active]="viewMode === 'cards'"
+          (click)="toggleViewMode('cards')">
+          <i class="bi bi-grid-3x3-gap-fill"></i> Cartes
+        </button>
+      </div>
+      <button class="btn btn-primary px-4" (click)="openModal()">
+        <i class="bi bi-plus-lg me-2"></i>Nouveau Type
+      </button>
+    </div>
+  </div>
+
+  <!-- CARTES STATISTIQUES -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-primary-subtle">
+              <i class="bi bi-tag-fill text-primary"></i>
+            </div>
+            <div class="ms-3">
+              <h3 class="mb-0 fw-bold">{{ totalTypes }}</h3>
+              <p class="text-muted mb-0 small">TOTAL TYPES</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-success-subtle">
+              <i class="bi bi-check-circle text-success"></i>
+            </div>
+            <div class="ms-3">
+              <h3 class="mb-0 fw-bold">{{ typesWithDescription }}</h3>
+              <p class="text-muted mb-0 small">AVEC DESCRIPTION</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  @if (notification.show) {
+    <div class="alert alert-dismissible fade show mb-4" 
+         [class.alert-success]="notification.type === 'success'"
+         [class.alert-danger]="notification.type === 'error'"
+         [class.alert-warning]="notification.type === 'warning'">
+      <i class="bi me-2" 
+         [class.bi-check-circle-fill]="notification.type === 'success'"
+         [class.bi-exclamation-triangle-fill]="notification.type === 'error' || notification.type === 'warning'"></i>
+      {{ notification.message }}
+      <button type="button" class="btn-close" (click)="notification.show = false"></button>
+    </div>
+  }
+
+  <!-- TABLEAU/CARTES -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      
+      <!-- BARRE DE FILTRES -->
+      <div class="p-3 border-bottom bg-light">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-8">
+            <div class="input-group">
+              <span class="input-group-text bg-white border-end-0">
+                <i class="bi bi-search text-muted"></i>
+              </span>
+              <input 
+                type="text" 
+                class="form-control border-start-0 ps-0" 
+                placeholder="Rechercher un type de contrat..."
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="applyFilters()">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <select class="form-select" [(ngModel)]="sortBy" (ngModelChange)="applySorting()">
+              <option value="">Trier par</option>
+              <option value="nom">Nom (A-Z)</option>
+              <option value="recent">Plus récent</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOADER -->
+      @if (isLoading) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+        </div>
+      } @else {
+        
+        @if (viewMode === 'list') {
+          <!-- VUE LISTE -->
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted">Type</th>
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted">Description</th>
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (type of pagedTypes; track type.id) {
+                  <tr>
+                    <td class="px-4 py-3">
+                      <div class="d-flex align-items-center">
+                        <div class="type-icon me-3">
+                          <i class="bi bi-tag-fill"></i>
+                        </div>
+                        <div>
+                          <div class="fw-bold">{{ type.libelle || type.libelle }}</div>
+                          <small class="text-muted">ID: {{ type.id?.substring(0, 8) }}...</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class="text-muted">{{ type.description || '-' }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-end">
+                      <button class="btn btn-sm btn-light me-1" (click)="openModal(type)" title="Modifier">
+                        <i class="bi bi-pencil text-primary"></i>
+                      </button>
+                      <button class="btn btn-sm btn-light" (click)="confirmDelete(type)" title="Supprimer">
+                        <i class="bi bi-trash text-danger"></i>
+                      </button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="3" class="text-center py-5">
+                      <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                      <p class="text-muted">Aucun type de contrat trouvé</p>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <!-- VUE CARTES -->
+          <div class="p-4">
+            <div class="row g-3">
+              @for (type of pagedTypes; track type.id) {
+                <div class="col-md-6 col-lg-4">
+                  <div class="card border-0 shadow-sm h-100 type-card">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="d-flex align-items-center">
+                          <div class="type-icon-large me-3">
+                            <i class="bi bi-tag-fill"></i>
+                          </div>
+                          <div>
+                            <h6 class="mb-0 fw-bold">{{ type.libelle || type.libelle }}</h6>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p class="text-muted small mb-3">{{ type.description || 'Aucune description' }}</p>
+
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary flex-fill" (click)="openModal(type)">
+                          <i class="bi bi-pencil me-1"></i>Modifier
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" (click)="confirmDelete(type)">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <div class="col-12">
+                  <div class="text-center py-5">
+                    <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                    <p class="text-muted">Aucun type de contrat trouvé</p>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- PAGINATION -->
+        @if (filteredTypes.length > pageSize) {
+          <div class="p-3 border-top bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+              <small class="text-muted">
+                Affichage de {{ startItemIndex }} à {{ endItemIndex }} sur {{ filteredTypes.length }} types
+              </small>
+              <nav>
+                <ul class="pagination pagination-sm mb-0">
+                  <li class="page-item" [class.disabled]="currentPage === 1">
+                    <button class="page-link" (click)="prevPage()">Précédent</button>
+                  </li>
+                  @for (page of pageNumbers; track page) {
+                    <li class="page-item" [class.active]="page === currentPage">
+                      <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+                    </li>
+                  }
+                  <li class="page-item" [class.disabled]="currentPage === totalPages">
+                    <button class="page-link" (click)="nextPage()">Suivant</button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AJOUT/MODIFICATION -->
+@if (isModalOpen) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-tag me-2"></i>
+            {{ isEditMode ? 'Modifier' : 'Nouveau' }} Type de Contrat
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" [(ngModel)]="selectedType.libelle" name="nom" placeholder="Ex: CDI, CDD, Freelance..." required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Description</label>
+              <textarea class="form-control" [(ngModel)]="selectedType.description" name="description" rows="4" placeholder="Ajoutez une description optionnelle..."></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light" (click)="closeModal()">Annuler</button>
+          <button type="button" class="btn btn-primary px-4" (click)="saveType()">
+            <i class="bi bi-check-circle me-2"></i>Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL CONFIRMATION SUPPRESSION -->
+@if (showDeleteConfirm) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-danger text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="showDeleteConfirm = false"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="mb-0">Êtes-vous sûr de vouloir supprimer le type <strong>{{ typeToDelete?.libelle || typeToDelete?.libelle }}</strong> ?</p>
+          <p class="text-muted mb-0 mt-2">Cette action est irréversible.</p>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light" (click)="showDeleteConfirm = false">Annuler</button>
+          <button type="button" class="btn btn-danger px-4" (click)="deleteType()">
+            <i class="bi bi-trash me-2"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

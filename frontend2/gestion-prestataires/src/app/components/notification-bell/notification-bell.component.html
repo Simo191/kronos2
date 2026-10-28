@@ -1,0 +1,71 @@
+<div class="notification-bell-wrap">
+  <!-- Bouton cloche avec badge -->
+  <button type="button" class="bell-btn" (click)="toggleDropdown()" title="Notifications">
+    <i class="bi bi-bell"></i>
+    @if (totalCount > 0) {
+      <span class="bell-badge"
+            [class.badge-danger]="expiredCount > 0"
+            [class.badge-warning]="expiredCount === 0">
+        {{ totalCount > 99 ? '99+' : totalCount }}
+      </span>
+    }
+  </button>
+
+  <!-- Dropdown -->
+  @if (isOpen) {
+    <div class="notif-dropdown" (click)="$event.stopPropagation()">
+      <div class="notif-header">
+        <div class="notif-title">
+          <i class="bi bi-bell me-2"></i>
+          <span class="fw-bold">Notifications</span>
+          @if (totalCount > 0) {
+            <span class="notif-counter">{{ totalCount }}</span>
+          }
+        </div>
+        <button class="notif-refresh" (click)="forceRefresh()" [disabled]="isRefreshing" title="Actualiser">
+          <i class="bi" [class.bi-arrow-clockwise]="!isRefreshing" [class.bi-hourglass-split]="isRefreshing"></i>
+        </button>
+      </div>
+
+      <div class="notif-body">
+        @if (totalCount === 0) {
+          <div class="notif-empty">
+            <i class="bi bi-check-circle text-success display-4"></i>
+            <p class="mt-2 mb-0 text-muted">Aucune alerte d'expiration.</p>
+            <small class="text-muted">Tout est à jour 🎉</small>
+          </div>
+        } @else {
+          @for (n of notifications; track n.id) {
+            <div [class]="itemClass(n)" (click)="openNotification(n)">
+              <div class="notif-icon">
+                @if (isCredential(n)) {
+                  <i class="bi bi-key-fill"></i>
+                } @else if (isContratQuota(n)) {
+                  <i class="bi bi-speedometer2"></i>
+                } @else {
+                  <i class="bi bi-calendar-x-fill"></i>
+                }
+              </div>
+              <div class="notif-content">
+                <div class="notif-line1">
+                  <span class="notif-title-txt">{{ n.title }}</span>
+                  @if (isExpired(n)) {
+                    <span class="badge bg-danger ms-2">Expiré</span>
+                  } @else {
+                    <span class="badge bg-warning text-dark ms-2">Bientôt</span>
+                  }
+                </div>
+                <div class="notif-subtitle">{{ n.subtitle }}</div>
+                @if (n.prestataireName) {
+                  <div class="notif-presta">
+                    <i class="bi bi-person-circle me-1"></i>{{ n.prestataireName }}
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+</div>

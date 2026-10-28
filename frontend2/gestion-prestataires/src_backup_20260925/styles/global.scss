@@ -1,0 +1,552 @@
+// =========================================
+// 🌍 FICHIER GLOBAL - ARCHITECTURE CENTRALISÉE
+// =========================================
+// 
+// Ce fichier doit être importé dans styles.scss (racine du projet)
+// 
+// Ordre d'importation :
+// 1. Variables (couleurs, tailles, etc.)
+// 2. Mixins (fonctions réutilisables)
+// 3. Composants (styles de base)
+// 
+// =========================================
+
+// 1️⃣ VARIABLES GLOBALES
+@import 'variables';
+
+// 2️⃣ MIXINS RÉUTILISABLES  
+@import 'mixins';
+
+// 3️⃣ COMPOSANTS GLOBAUX
+@import 'components';
+
+// =========================================
+// 🎨 STYLES GLOBAUX SUPPLÉMENTAIRES
+// =========================================
+
+// Reset & Base
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: $font-size-base;
+  line-height: $line-height-normal;
+  color: $text-primary;
+  background-color: $bg-body;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// Links
+a {
+  color: $primary;
+  text-decoration: none;
+  transition: $transition-base;
+  
+  &:hover {
+    color: $primary-dark;
+  }
+}
+
+// Headings
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  margin-bottom: $spacing-base;
+  font-weight: $font-weight-semibold;
+  line-height: $line-height-tight;
+  color: $gray-900;
+}
+
+h1 { font-size: $font-size-3xl; }
+h2 { font-size: $font-size-2xl; }
+h3 { font-size: $font-size-xl; }
+h4 { font-size: $font-size-lg; }
+h5 { font-size: $font-size-md; }
+h6 { font-size: $font-size-base; }
+
+// Paragraphs
+p {
+  margin-top: 0;
+  margin-bottom: $spacing-base;
+}
+
+// Lists
+ul, ol {
+  margin-top: 0;
+  margin-bottom: $spacing-base;
+  padding-left: $spacing-xl;
+}
+
+// Images
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+// Buttons reset
+button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+// Tables
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+// Forms
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+// Focus outline
+:focus-visible {
+  outline: 2px solid $primary;
+  outline-offset: 2px;
+}
+
+// Selection
+::selection {
+  background-color: $primary-subtle;
+  color: $primary-dark;
+}
+
+::-moz-selection {
+  background-color: $primary-subtle;
+  color: $primary-dark;
+}
+
+// Scrollbar global
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: $gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $gray-400;
+  border-radius: $radius-xs;
+  
+  &:hover {
+    background: $gray-500;
+  }
+}
+
+// =========================================
+// 🔧 UTILITIES PERSONNALISÉES
+// =========================================
+
+// Margin auto
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.my-auto {
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+// Text utilities
+.text-uppercase {
+  text-transform: uppercase;
+}
+
+.text-lowercase {
+  text-transform: lowercase;
+}
+
+.text-capitalize {
+  text-transform: capitalize;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-justify {
+  text-align: justify;
+}
+
+// Font weights
+.fw-light {
+  font-weight: $font-weight-light;
+}
+
+.fw-normal {
+  font-weight: $font-weight-normal;
+}
+
+.fw-medium {
+  font-weight: $font-weight-medium;
+}
+
+.fw-semibold {
+  font-weight: $font-weight-semibold;
+}
+
+.fw-bold {
+  font-weight: $font-weight-bold;
+}
+
+// Display utilities
+.d-none {
+  display: none !important;
+}
+
+.d-block {
+  display: block !important;
+}
+
+.d-inline {
+  display: inline !important;
+}
+
+.d-inline-block {
+  display: inline-block !important;
+}
+
+.d-flex {
+  display: flex !important;
+}
+
+.d-grid {
+  display: grid !important;
+}
+
+// Flex utilities
+.flex-row {
+  flex-direction: row !important;
+}
+
+.flex-column {
+  flex-direction: column !important;
+}
+
+.justify-content-start {
+  justify-content: flex-start !important;
+}
+
+.justify-content-end {
+  justify-content: flex-end !important;
+}
+
+.justify-content-center {
+  justify-content: center !important;
+}
+
+.justify-content-between {
+  justify-content: space-between !important;
+}
+
+.justify-content-around {
+  justify-content: space-around !important;
+}
+
+.align-items-start {
+  align-items: flex-start !important;
+}
+
+.align-items-end {
+  align-items: flex-end !important;
+}
+
+.align-items-center {
+  align-items: center !important;
+}
+
+.align-items-baseline {
+  align-items: baseline !important;
+}
+
+.flex-fill {
+  flex: 1 1 auto !important;
+}
+
+.flex-grow-0 {
+  flex-grow: 0 !important;
+}
+
+.flex-grow-1 {
+  flex-grow: 1 !important;
+}
+
+.flex-shrink-0 {
+  flex-shrink: 0 !important;
+}
+
+.flex-shrink-1 {
+  flex-shrink: 1 !important;
+}
+
+.flex-wrap {
+  flex-wrap: wrap !important;
+}
+
+.flex-nowrap {
+  flex-wrap: nowrap !important;
+}
+
+// Gap utilities
+.gap-1 {
+  gap: $spacing-xs !important;
+}
+
+.gap-2 {
+  gap: $spacing-sm !important;
+}
+
+.gap-3 {
+  gap: $spacing-base !important;
+}
+
+.gap-4 {
+  gap: $spacing-lg !important;
+}
+
+.gap-5 {
+  gap: $spacing-2xl !important;
+}
+
+// Width utilities
+.w-25 {
+  width: 25% !important;
+}
+
+.w-50 {
+  width: 50% !important;
+}
+
+.w-75 {
+  width: 75% !important;
+}
+
+.w-100 {
+  width: 100% !important;
+}
+
+.w-auto {
+  width: auto !important;
+}
+
+// Height utilities
+.h-25 {
+  height: 25% !important;
+}
+
+.h-50 {
+  height: 50% !important;
+}
+
+.h-75 {
+  height: 75% !important;
+}
+
+.h-100 {
+  height: 100% !important;
+}
+
+.h-auto {
+  height: auto !important;
+}
+
+// Position utilities
+.position-relative {
+  position: relative !important;
+}
+
+.position-absolute {
+  position: absolute !important;
+}
+
+.position-fixed {
+  position: fixed !important;
+}
+
+.position-sticky {
+  position: sticky !important;
+}
+
+// Overflow utilities
+.overflow-hidden {
+  overflow: hidden !important;
+}
+
+.overflow-auto {
+  overflow: auto !important;
+}
+
+.overflow-scroll {
+  overflow: scroll !important;
+}
+
+// Cursor utilities
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+.cursor-not-allowed {
+  cursor: not-allowed !important;
+}
+
+// User select
+.user-select-none {
+  user-select: none !important;
+}
+
+// Visibility
+.visible {
+  visibility: visible !important;
+}
+
+.invisible {
+  visibility: hidden !important;
+}
+
+// Opacity
+.opacity-0 {
+  opacity: 0 !important;
+}
+
+.opacity-25 {
+  opacity: 0.25 !important;
+}
+
+.opacity-50 {
+  opacity: 0.5 !important;
+}
+
+.opacity-75 {
+  opacity: 0.75 !important;
+}
+
+.opacity-100 {
+  opacity: 1 !important;
+}
+
+// Border radius
+.rounded {
+  border-radius: $radius-sm !important;
+}
+
+.rounded-md {
+  border-radius: $radius-md !important;
+}
+
+.rounded-lg {
+  border-radius: $radius-lg !important;
+}
+
+.rounded-full {
+  border-radius: $radius-full !important;
+}
+
+.rounded-0 {
+  border-radius: 0 !important;
+}
+
+// =========================================
+// 📱 RESPONSIVE VISIBILITY
+// =========================================
+
+@include mobile-only {
+  .d-md-none {
+    display: none !important;
+  }
+}
+
+@include tablet-up {
+  .d-none-md {
+    display: none !important;
+  }
+  
+  .d-md-block {
+    display: block !important;
+  }
+  
+  .d-md-flex {
+    display: flex !important;
+  }
+}
+
+@include desktop-up {
+  .d-none-lg {
+    display: none !important;
+  }
+  
+  .d-lg-block {
+    display: block !important;
+  }
+  
+  .d-lg-flex {
+    display: flex !important;
+  }
+}
+
+// =========================================
+// 🎯 PRINT STYLES
+// =========================================
+
+@media print {
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  body {
+    background: white !important;
+  }
+  
+  .btn,
+  .dropdown,
+  .pagination,
+  .modal {
+    display: none !important;
+  }
+}
+
+// =========================================
+// 🌙 DARK MODE (Optionnel - À activer si besoin)
+// =========================================
+
+// @media (prefers-color-scheme: dark) {
+//   body {
+//     background-color: #1a1a1a;
+//     color: #ffffff;
+//   }
+//   
+//   .card {
+//     background-color: #2a2a2a;
+//   }
+//   
+//   .table {
+//     color: #ffffff;
+//   }
+// }

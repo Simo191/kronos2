@@ -1,0 +1,742 @@
+<div class="shift-planning-page">
+
+  <!-- ✅ Système de notifications centralisé -->
+  <app-notification-toast></app-notification-toast>
+
+  <!-- En-tête -->
+  <div class="planning-header-row">
+    <div>
+      <h1 class="page-title">
+        <i class="bi bi-calendar3"></i>
+        Planning des Prestataires & Internes
+      </h1>
+      <p class="page-subtitle">Gérez les shifts et plannings de vos collaborateurs</p>
+    </div>
+
+    <div class="header-actions">
+      @if (isAdminOrManager()) {
+        <button class="btn btn-success" (click)="openGenerationModal()">
+          <i class="bi bi-calculator"></i>
+          Générer jours-travail
+        </button>
+      }
+      <button class="btn btn-outline-primary" (click)="toggleViewMode()">
+        <i class="bi" [ngClass]="viewMode === 'month' ? 'bi-calendar-week' : 'bi-calendar-month'"></i>
+        {{ viewMode === 'month' ? 'Semaine' : 'Mois' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Indicateur de copie compact (toast) -->
+  @if (copiedData) {
+    <div class="copy-indicator">
+      <i class="bi bi-clipboard-check-fill"></i>
+      {{ copiedData.shifts.length }} shift(s) copié(s) — <kbd>Ctrl+V</kbd> dans la position sélectionnée
+      <button class="btn-close-copy" (click)="clearClipboard()"><i class="bi bi-x-lg"></i></button>
+    </div>
+  }
+
+  <!-- Stats — Admin/Manager : tous, User : uniquement ses propres jours -->
+  <div class="stats-row">
+    <div class="stat-card stat-travail">
+      <div class="stat-icon"><i class="bi bi-briefcase-fill"></i></div>
+      <div class="stat-content">
+        <div class="stat-value">{{ isAdminOrManager() ? getJoursTravail() : getJoursTravailUser() }}</div>
+        <div class="stat-label">JOURS TRAVAIL</div>
+      </div>
+    </div>
+    <div class="stat-card stat-absence">
+      <div class="stat-icon"><i class="bi bi-x-circle-fill"></i></div>
+      <div class="stat-content">
+        <div class="stat-value">{{ isAdminOrManager() ? getJoursAbsence() : getJoursAbsenceUser() }}</div>
+        <div class="stat-label">JOURS ABSENCE</div>
+      </div>
+    </div>
+    <div class="stat-card stat-conge">
+      <div class="stat-icon"><i class="bi bi-calendar-check-fill"></i></div>
+      <div class="stat-content">
+        <div class="stat-value">{{ isAdminOrManager() ? getJoursConge() : getJoursCongeUser() }}</div>
+        <div class="stat-label">JOURS CONGÉ</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-card">
+    <div class="filters-grid">
+      <div class="filter-item">
+        <label class="filter-label">Prestataire / Interne</label>
+        <select class="form-select" [(ngModel)]="selectedPrestataireId" (change)="onPrestataireFilterChange()">
+          <option [value]="null">Tous</option>
+          @for (p of prestataires; track p.id) {
+            <option [value]="p.id">
+              {{ p.prenom }} {{ p.nom }} {{ p.responsable ? '(Interne)' : '' }}
+            </option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Planning Card -->
+  <div class="planning-card">
+    <!-- Navigation -->
+    <div class="calendar-nav">
+      <button class="btn btn-sm btn-outline-secondary" (click)="previousPeriod()">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <h3 class="period-title">{{ getCurrentPeriodLabel() }}</h3>
+      <button class="btn btn-sm btn-outline-secondary" (click)="nextPeriod()">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+
+    <!-- Calendrier -->
+    <div class="calendar-outer">
+      <div class="calendar-wrapper" #calendarWrapper (mousedown)="initDragSelect($event, calendarWrapper)" style="position:relative;user-select:none">
+        <!-- ✅ Rectangle de sélection rubber-band -->
+        @if (isDragging && dragRect) {
+          <div class="rubber-band-rect" [style.left.px]="dragRect.left" [style.top.px]="dragRect.top" [style.width.px]="dragRect.width" [style.height.px]="dragRect.height"></div>
+        }
+        <table class="calendar-table">
+          <thead>
+            <tr>
+              <th class="prestataire-header">COLLABORATEURS</th>
+              @for (day of getAllDaysForView(); track day.getTime()) {
+                <th class="day-header-cell"
+                    [class.weekend]="isWeekend(day)"
+                    [class.today]="isToday(day)"
+                    [class.jour-ferie]="isJourFerie(day)">
+                  <div class="day-header-content">
+                    <div class="day-name">{{ getDayName(day) }}</div>
+                    <div class="day-number">{{ day.getDate() }}</div>
+                  </div>
+                </th>
+              }
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (prestataire of getFilteredPrestataires(); track prestataire.id; let i = $index) {
+              <tr [class.row-even]="i % 2 === 0" [class.row-odd]="i % 2 !== 0"
+                  [class.row-responsable]="prestataire.responsable"
+                  [class.drag-over]="dragOverPrestataireId === prestataire.id"
+                  [class.dragging]="draggedPrestataire?.id === prestataire.id"
+                  draggable="true"
+                  (dragstart)="onDragStart($event, prestataire)"
+                  (dragover)="onDragOver($event, prestataire)"
+                  (dragleave)="onDragLeave()"
+                  (drop)="onDrop($event, prestataire)"
+                  (dragend)="onDragEnd()">
+                <td class="prestataire-cell">
+                  <div class="prestataire-info">
+
+                    <!-- ✅ POINT 1 : Poignée drag & drop (remplace les boutons) -->
+                    @if (canManage()) {
+                      <div class="drag-handle" title="Glisser pour réordonner">
+                        <i class="bi bi-grip-vertical"></i>
+                      </div>
+                    }
+
+                    <!-- ✅ POINT 3 : Avatar image OU initiales -->
+                    <div class="prestataire-avatar-wrap">
+                      @if (getAvatarUrl(prestataire)) {
+                        <img [src]="getAvatarUrl(prestataire)!"
+                             class="prestataire-avatar-img"
+                             [alt]="prestataire.prenom"
+                             (error)="prestataire.imageUrl = undefined">
+                      } @else {
+                        <div class="prestataire-avatar"
+                             [class.avatar-responsable]="prestataire.responsable">
+                          {{ getInitials(prestataire.id!) }}
+                        </div>
+                      }
+                    </div>
+
+                    <div class="prestataire-details">
+                      <div class="prestataire-name">{{ prestataire.prenom }} {{ prestataire.nom }}</div>
+
+                      <!-- Badge Responsable / Prestataire -->
+                      <div class="prestataire-badges">
+                        @if (prestataire.responsable) {
+                          <span class="badge-role badge-responsable">
+                            <i class="bi bi-person-badge-fill me-1"></i>Interne
+                          </span>
+                        } @else {
+                          <span class="badge-role badge-prestataire">
+                            <i class="bi bi-person-workspace me-1"></i>Prestataire
+                          </span>
+                        }
+                      </div>
+
+                      <!-- ✅ POINT 2 : PAS d'indicateur jours restants ici -->
+
+                      <div class="prestataire-hours">{{ getJoursTravailForPrestataire(prestataire.id!) }} j travaillés</div>
+                    </div>
+                  </div>
+                </td>
+
+                @for (day of getAllDaysForView(); track day.getTime()) {
+                  <td class="shift-cell"
+                      [class.multiple-shifts]="getShiftsForDay(day, prestataire.id!).length > 1"
+                      [class.weekend]="isWeekend(day)"
+                      [class.today]="isToday(day)"
+                      [class.jour-ferie]="isJourFerie(day)"
+                      [class.cell-selected]="isCellSelected(day, prestataire.id!)"
+                      [class.disabled]="!canAddForCell(prestataire, day) && getShiftsForDay(day, prestataire.id!).length === 0"
+                      [style.cursor]="!canAddForCell(prestataire, day) && getShiftsForDay(day, prestataire.id!).length === 0 ? 'not-allowed' : 'pointer'"
+                      (click)="onCellSingleClick($event, day, prestataire)"
+                      (dblclick)="canAddForCell(prestataire, day) || getShiftsForDay(day, prestataire.id!).length > 0 ? onCellDblClick($event, day, prestataire) : null"
+                      (contextmenu)="onCellRightClick($event, day, prestataire)">
+
+                    <div class="shift-badges">
+                      @for (shift of getShiftsForDay(day, prestataire.id!); track shift.id) {
+                        <div class="shift-badge"
+                             [class.demi-journee]="shift.nombreJours === 0.5"
+                             [ngClass]="[shift.typeShift.bgColor, shift.typeShift.borderColor, shift.typeShift.textColor]"
+                             [style]="getShiftStyle(shift.typeShift)"
+                             [class.shift-selected]="isShiftSelected(shift.id)"
+                             [attr.data-shift-id]="shift.id"
+                             [title]="shift.typeShift.label + (shift.notes ? ' - ' + shift.notes : '')"
+                             (click)="onShiftClick($event, shift)"
+                             (contextmenu)="onShiftRightClick($event, shift, day, prestataire)">
+                          <span class="badge-label">{{ shift.typeShift.shortLabel }}</span>
+                          @if (shift.notes) {
+                            <span class="badge-note">{{ shift.notes.length > 8 ? (shift.notes | slice:0:8) + '…' : shift.notes }}</span>
+                          }
+                        </div>
+                        
+                      }
+                    </div>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Légende -->
+    <div class="legend-section">
+      <div class="legend-title">LÉGENDE:</div>
+      <div class="legend-items">
+        @for (typeShift of typeShifts; track typeShift.id) {
+          <div class="legend-item">
+            <span class="legend-badge" [ngClass]="[typeShift.bgColor, typeShift.borderColor, typeShift.textColor]" [style]="getShiftStyle(typeShift)">
+              {{ typeShift.shortLabel }}
+            </span>
+            <span class="legend-label">{{ typeShift.label }}</span>
+          </div>
+        }
+        <div class="legend-item">
+          <span class="legend-badge legend-ferie">JF</span>
+          <span class="legend-label">Jour férié</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ MENU CONTEXTUEL -->
+@if (contextMenu.show) {
+  <div class="context-menu"
+       [style.left.px]="contextMenu.x"
+       [style.top.px]="contextMenu.y"
+       (click)="$event.stopPropagation()">
+
+    @if (contextMenu.type === 'shift') {
+      @if (contextMenuShift && canModifyShift(contextMenuShift)) {
+        <div class="context-menu-item" (click)="editShiftFromContext()">
+          <i class="bi bi-pencil-square"></i><span>Modifier le shift</span>
+        </div>
+        <div class="context-menu-divider"></div>
+      }
+      <div class="context-menu-item" (click)="copyShiftFromContext()">
+        <i class="bi bi-clipboard"></i><span>Copier</span><kbd>Ctrl+C</kbd>
+      </div>
+      @if (copiedData) {
+        <div class="context-menu-item" (click)="pasteShiftsFromContext()">
+          <i class="bi bi-clipboard-check"></i>
+          <span>Coller {{ copiedData.shifts.length }} shift(s) - {{ copiedData.dates.length }} jour(s)</span>
+          <kbd>Ctrl+V</kbd>
+        </div>
+      }
+      @if (contextMenuShift && canModifyShift(contextMenuShift)) {
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger" (click)="deleteShiftFromContext()">
+          <i class="bi bi-trash"></i><span>Supprimer</span><kbd>Del</kbd>
+        </div>
+      }
+    }
+
+    @if (contextMenu.type === 'cell') {
+      @if (canAddOnDay()) {
+        <div class="context-menu-item" (click)="addShiftFromContext()">
+          <i class="bi bi-plus-circle"></i><span>Ajouter un shift</span>
+        </div>
+      }
+      @if (copiedData) {
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" (click)="pasteShiftsFromContext()">
+          <i class="bi bi-clipboard-check"></i>
+          <span>Coller {{ copiedData.shifts.length }} shift(s) - {{ copiedData.dates.length }} jour(s)</span>
+          <kbd>Ctrl+V</kbd>
+        </div>
+      }
+    }
+  </div>
+}
+
+<!-- MODAL SHIFT -->
+@if (showModal) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi me-2" [class.bi-plus-circle]="modalMode === 'create'" [class.bi-pencil-square]="modalMode === 'edit'"></i>
+            {{ modalMode === 'create' ? 'Ajouter un shift' : 'Modifier le shift' }}
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <form>
+            <!-- PRESTATAIRE / RESPONSABLE -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold d-flex align-items-center">
+                <i class="bi bi-person-fill me-2 text-primary"></i>
+                Collaborateur
+              </label>
+              @if (modalMode === 'edit') {
+                <div class="form-control-plaintext fw-semibold d-flex align-items-center gap-2">
+                  <div class="avatar-circle me-2" style="width: 28px; height: 28px; font-size: 10px;">
+                    {{ getInitials(selectedShift?.prestataireId || '') }}
+                  </div>
+                  {{ getPrestataireLabel(selectedShift?.prestataireId || '') }}
+                </div>
+              } @else {
+                <div class="form-control-plaintext fw-semibold d-flex align-items-center gap-2">
+                  <div class="avatar-circle me-2" style="width: 28px; height: 28px; font-size: 10px;">
+                    {{ getInitials(selectedPrestataire || '') }}
+                  </div>
+                  {{ getPrestataireLabel(selectedPrestataire || '') }}
+                </div>
+              }
+            </div>
+
+            <!-- PÉRIODE -->
+            @if (modalMode === 'create') {
+              <div class="mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <label class="form-label fw-semibold mb-0 d-flex align-items-center">
+                    <i class="bi bi-calendar-range me-2 text-primary"></i>Période
+                  </label>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="enableDateRange"
+                           [(ngModel)]="isDateRangeEnabled" name="dateRange">
+                    <label class="form-check-label small" for="enableDateRange">Intervalle de dates</label>
+                  </div>
+                </div>
+                @if (!isDateRangeEnabled) {
+                  <div class="alert alert-info mb-0 py-2 px-3">
+                    <i class="bi bi-calendar-event me-2"></i>
+                    <strong>{{ selectedDate | date:'fullDate':'':'fr' }}</strong>
+                  </div>
+                } @else {
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label small">Date de début <span class="text-danger">*</span></label>
+                      <input type="date" class="form-control" [(ngModel)]="rangeStartDate" name="rangeStart" required>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label small">Date de fin <span class="text-danger">*</span></label>
+                      <input type="date" class="form-control" [(ngModel)]="rangeEndDate" name="rangeEnd" [min]="rangeStartDate" required>
+                    </div>
+                  </div>
+                  <div class="alert alert-warning mt-2 py-2 px-3 small">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Un shift sera créé pour <strong>chaque jour ouvrable</strong> de cet intervalle
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="mb-4">
+                <label class="form-label fw-semibold d-flex align-items-center">
+                  <i class="bi bi-calendar-event me-2 text-primary"></i>Date
+                </label>
+                <div class="alert alert-info mb-0 py-2 px-3">
+                  <i class="bi bi-calendar-event me-2"></i>
+                  <strong>{{ selectedShift?.date | date:'fullDate':'':'fr' }}</strong>
+                </div>
+              </div>
+            }
+
+            <!-- TYPE DE SHIFT -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold d-flex align-items-center">
+                <i class="bi bi-tag-fill me-2 text-primary"></i>
+                Type de shift <span class="text-danger ms-1">*</span>
+              </label>
+              <div class="row g-2">
+                @for (typeShift of typeShifts; track typeShift.id) {
+                  <div class="col-md-4 col-6">
+                    <button type="button" class="btn w-100 shift-type-btn"
+                            [class.active]="selectedTypeShiftId === typeShift.id"
+                            [ngClass]="[typeShift.bgColor, typeShift.borderColor, typeShift.textColor]"
+                            [style]="getShiftStyle(typeShift)"
+                            (click)="selectedTypeShiftId = typeShift.id">
+                      <div class="fw-bold small">{{ typeShift.label }}</div>
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- DURÉE -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold d-flex align-items-center">
+                <i class="bi bi-clock-fill me-2 text-primary"></i>
+                Durée du shift <span class="text-danger ms-1">*</span>
+              </label>
+              <div class="row g-2">
+                <div class="col-6">
+                  <button type="button" class="btn w-100 shift-duration-btn"
+                          [class.active]="nombreJours === 0.5"
+                          [class.btn-outline-warning]="nombreJours !== 0.5"
+                          [class.btn-warning]="nombreJours === 0.5"
+                          (click)="nombreJours = 0.5">
+                    <i class="bi bi-hourglass-split me-1"></i>
+                    <div class="fw-bold">0.5 jour</div>
+                    <small class="d-block">Demi-journée (4h)</small>
+                  </button>
+                </div>
+                <div class="col-6">
+                  <button type="button" class="btn w-100 shift-duration-btn"
+                          [class.active]="nombreJours === 1"
+                          [class.btn-outline-success]="nombreJours !== 1"
+                          [class.btn-success]="nombreJours === 1"
+                          (click)="nombreJours = 1">
+                    <i class="bi bi-calendar-check me-1"></i>
+                    <div class="fw-bold">1 jour</div>
+                    <small class="d-block">Journée complète (8h)</small>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- NOTES -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold d-flex align-items-center">
+                <i class="bi bi-sticky me-2 text-primary"></i>Notes (optionnel)
+              </label>
+              <textarea [(ngModel)]="shiftNotes" name="notes" class="form-control" rows="3"
+                        maxlength="500" placeholder="Ajouter une note (500 caractères max)"></textarea>
+              <small class="text-muted">{{ shiftNotes.length || 0 }}/500 caractères</small>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light px-4" (click)="closeModal()">
+            <i class="bi bi-x-circle me-2"></i>Annuler
+          </button>
+          <button type="button" class="btn btn-primary px-4"
+                  (click)="saveShift()"
+                  [disabled]="!selectedTypeShiftId || (modalMode === 'create' && !selectedPrestataire)">
+            <i class="bi bi-check-circle me-2"></i>
+            {{ isDateRangeEnabled && modalMode === 'create' ? 'Créer les shifts' : 'Enregistrer' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ✅ MODAL GÉNÉRATION JOURS-TRAVAIL -->
+@if (showGenerationModal) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content border-0 shadow">
+
+        <div class="modal-header bg-success text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-calculator me-2"></i>
+            Génération automatique des jours-travail
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeGenerationModal()"></button>
+        </div>
+
+        <div class="modal-body p-4">
+
+          @if (generationResults.length === 0) {
+            <div class="mb-4">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-calendar-month me-2"></i>Sélectionner le mois à générer
+              </label>
+              <input type="month" class="form-control form-control-lg"
+                     [(ngModel)]="selectedMonthForGeneration"
+                     [disabled]="generationInProgress">
+              <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Cette action va :</strong>
+                <ul class="mb-0 mt-2">
+                  <li>Calculer les jours travaillés (shifts de type "Travail") pour chaque collaborateur</li>
+                  <li>Vérifier les contrats actifs et les quotas disponibles (pour les prestataires)</li>
+                  <li>Générer directement pour les <strong>Internes</strong> sans vérification de contrat</li>
+                  <li>Créer ou mettre à jour les jours-travail automatiquement</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="text-center">
+              <button class="btn btn-success btn-lg px-5"
+                      (click)="generateJoursTravail()"
+                      [disabled]="generationInProgress || !selectedMonthForGeneration">
+                @if (generationInProgress) {
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Génération en cours...
+                } @else {
+                  <i class="bi bi-play-circle me-2"></i>
+                  Lancer la génération
+                }
+              </button>
+            </div>
+          }
+
+          <!-- Résultats -->
+          @if (generationResults.length > 0) {
+            <div class="generation-results">
+
+              <!-- Résumé -->
+              <div class="row mb-4">
+                <div class="col-md-4">
+                  <div class="result-card success">
+                    <div class="result-icon"><i class="bi bi-check-circle-fill"></i></div>
+                    <div class="result-count">{{ getResultsCount('success') }}</div>
+                    <div class="result-label">Succès</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="result-card warning">
+                    <div class="result-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                    <div class="result-count">{{ getResultsCount('quota_depasse') }}</div>
+                    <div class="result-label">Quota dépassé</div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="result-card danger">
+                    <div class="result-icon"><i class="bi bi-x-circle-fill"></i></div>
+                    <div class="result-count">{{ getResultsCount('contrat_introuvable') + getResultsCount('error') }}</div>
+                    <div class="result-label">Erreurs / Sans contrat</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Détails -->
+              <div class="results-details">
+
+                <!-- Succès -->
+                @if (getResultsCount('success') > 0) {
+                  <div class="result-section success">
+                    <h6 class="result-section-title">
+                      <i class="bi bi-check-circle-fill me-2"></i>
+                      Jours-travail générés avec succès ({{ getResultsCount('success') }})
+                    </h6>
+                    <div class="table-responsive">
+                      <table class="table table-sm">
+                        <thead>
+                          <tr>
+                            <th>Prestataire</th><th>Mois</th>
+                            <th class="text-end">Jours</th><th class="text-end">TJM</th>
+                            <th class="text-end">Montant</th><th class="text-end">Quota utilisé</th><th>Statut</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (result of getResultsByStatus('success'); track result.prestataireNom) {
+                            <tr>
+                              <td>{{ result.prestatairePrenom }} {{ result.prestataireNom }}</td>
+                              <td>{{ result.mois }}</td>
+                              <td class="text-end">{{ result.nombreJours }}</td>
+                              <td class="text-end">{{ result.tjm | number:'1.2-2' }} €</td>
+                              <td class="text-end fw-bold">{{ result.montantTotal | number:'1.2-2' }} €</td>
+                              <td class="text-end">{{ result.joursUtilises }}/{{ result.quotaContrat }}</td>
+                              <td>
+                                <span class="badge bg-success">
+                                  <i class="bi bi-check"></i> {{ result.message }}
+                                </span>
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+
+                <!-- Quota dépassé -->
+                @if (getResultsCount('quota_depasse') > 0) {
+                  <div class="result-section warning">
+                    <h6 class="result-section-title">
+                      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                      Quota dépassé ({{ getResultsCount('quota_depasse') }})
+                    </h6>
+                    <div class="table-responsive">
+                      <table class="table table-sm">
+                        <thead>
+                          <tr><th>Prestataire</th><th>Mois</th><th class="text-end">Jours demandés</th><th class="text-end">Quota utilisé</th><th>Raison</th></tr>
+                        </thead>
+                        <tbody>
+                          @for (result of getResultsByStatus('quota_depasse'); track result.prestataireNom) {
+                            <tr>
+                              <td>{{ result.prestatairePrenom }} {{ result.prestataireNom }}</td>
+                              <td>{{ result.mois }}</td>
+                              <td class="text-end">{{ result.nombreJours }}</td>
+                              <td class="text-end">{{ result.joursUtilises }}/{{ result.quotaContrat }}</td>
+                              <td><span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> {{ result.message }}</span></td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+
+                <!-- Contrat introuvable -->
+                @if (getResultsCount('contrat_introuvable') > 0) {
+                  <div class="result-section danger">
+                    <h6 class="result-section-title">
+                      <i class="bi bi-x-circle-fill me-2"></i>
+                      Contrat introuvable ({{ getResultsCount('contrat_introuvable') }})
+                    </h6>
+                    <div class="table-responsive">
+                      <table class="table table-sm">
+                        <thead>
+                          <tr><th>Prestataire</th><th>Mois</th><th class="text-end">Jours travaillés</th><th>Raison</th></tr>
+                        </thead>
+                        <tbody>
+                          @for (result of getResultsByStatus('contrat_introuvable'); track result.prestataireNom) {
+                            <tr>
+                              <td>{{ result.prestatairePrenom }} {{ result.prestataireNom }}</td>
+                              <td>{{ result.mois }}</td>
+                              <td class="text-end">{{ result.nombreJours }}</td>
+                              <td><span class="badge bg-danger"><i class="bi bi-x-circle"></i> {{ result.message }}</span></td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+
+                <!-- Erreurs -->
+                @if (getResultsCount('error') > 0) {
+                  <div class="result-section error">
+                    <h6 class="result-section-title">
+                      <i class="bi bi-bug-fill me-2"></i>Erreurs ({{ getResultsCount('error') }})
+                    </h6>
+                    <div class="table-responsive">
+                      <table class="table table-sm">
+                        <thead>
+                          <tr><th>Collaborateur</th><th>Mois</th><th>Erreur</th></tr>
+                        </thead>
+                        <tbody>
+                          @for (result of getResultsByStatus('error'); track result.prestataireNom) {
+                            <tr>
+                              <td>{{ result.prestatairePrenom }} {{ result.prestataireNom }}</td>
+                              <td>{{ result.mois }}</td>
+                              <td><span class="badge bg-secondary"><i class="bi bi-bug"></i> {{ result.message }}</span></td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+
+              </div>
+            </div>
+          }
+
+        </div>
+
+        <!-- ✅ Footer avec bouton Verrouiller le mois après génération -->
+        <div class="modal-footer border-0 bg-light">
+          @if (generationResults.length === 0) {
+            <button type="button" class="btn btn-light px-4" (click)="closeGenerationModal()">
+              <i class="bi bi-x-circle me-2"></i>Annuler
+            </button>
+          } @else {
+            <button type="button" class="btn btn-light px-4" (click)="closeGenerationModal()">
+              <i class="bi bi-check-circle me-2"></i>Fermer
+            </button>
+
+            <!-- ✅ NOUVEAU : Bouton Verrouiller le mois -->
+            @if (generationComplete) {
+              <button type="button"
+                      class="btn btn-warning px-4"
+                      (click)="verrouilerMoisApresGeneration()"
+                      [disabled]="lockingMonth">
+                @if (lockingMonth) {
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  Verrouillage...
+                } @else {
+                  <i class="bi bi-lock-fill me-2"></i>
+                  Verrouiller le mois {{ selectedMonthForGeneration }}
+                }
+              </button>
+            }
+          }
+        </div>
+
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL DE CONFIRMATION -->
+@if (showConfirmModal) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-danger text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-exclamation-triangle me-2"></i>{{ confirmTitle }}
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeConfirmModal()"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="mb-0">{{ confirmMessage }}</p>
+          <p class="text-muted mb-0 mt-2">Cette action est irréversible.</p>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light" (click)="closeConfirmModal()">Annuler</button>
+          <button type="button" class="btn btn-danger px-4" (click)="confirmDelete()">
+            <i class="bi bi-trash me-2"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL D'ERREUR -->
+@if (showErrorModal) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-danger text-white border-0">
+          <h5 class="modal-title fw-bold"><i class="bi bi-x-circle me-2"></i>Accès refusé</h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeErrorModal()"></button>
+        </div>
+        <div class="modal-body p-4"><p class="mb-0">{{ errorMessage }}</p></div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-primary px-4" (click)="closeErrorModal()">
+            <i class="bi bi-check-circle me-2"></i>OK
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

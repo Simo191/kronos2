@@ -1,0 +1,418 @@
+<div class="p-page">
+    <app-notification-toast></app-notification-toast>
+  
+    <!-- ══════════════════════════════════════════ HEADER -->
+    <div class="p-hd">
+      <div class="p-hd-left">
+        <i class="bi bi-calendar3-week p-hd-icon"></i>
+        <h1 class="p-hd-title">Planning</h1>
+        <span class="p-hd-year">{{ periodLabel }}</span>
+      </div>
+      <div class="p-hd-right">
+        <div class="p-nav-group">
+          <button class="p-nav-btn" (click)="previous()"><i class="bi bi-chevron-left"></i></button>
+          <button class="p-nav-today" (click)="goToday()">Aujourd'hui</button>
+          <button class="p-nav-btn" (click)="next()"><i class="bi bi-chevron-right"></i></button>
+        </div>
+        <div class="p-view-group">
+          <button [class.active]="viewMode==='week'"  (click)="setView('week')">Semaine</button>
+          <button [class.active]="viewMode==='month'" (click)="setView('month')">Mois</button>
+          <button [class.active]="viewMode==='year'"  (click)="setView('year')">Année</button>
+        </div>
+        <div class="pf-wrap">
+          <button class="p-btn-outline" (click)="showPrestFilter=!showPrestFilter">
+            <i class="bi bi-people"></i> {{ getFilterLabel() }} <i class="bi bi-chevron-down"></i>
+          </button>
+          @if (showPrestFilter) {
+            <div class="pf-drop">
+              <!--   Toggle : afficher aussi les comptes désactivés (historique) -->
+              <div class="pf-toggle-wrap" (click)="$event.stopPropagation()">
+                <label class="show-inactive-toggle" [class.is-on]="showInactivePrest">
+                  <input type="checkbox" [checked]="showInactivePrest" (change)="toggleShowInactivePrest()">
+                  <span class="toggle-track"></span>
+                  <i class="bi bi-slash-circle"></i>
+                  <span>Inclure désactivés</span>
+                </label>
+              </div>
+              <div class="pf-item" [class.pf-active]="!filterPrestId" (click)="filterPrestId=null;showPrestFilter=false">Tous</div>
+              @for (p of prestataires; track p.id) {
+                <div class="pf-item" [class.pf-active]="filterPrestId===p.id"
+                     [class.is-inactive-row]="p.isActive === false"
+                     (click)="filterPrestId=p.id!;showPrestFilter=false">
+                  <span class="pf-av">{{getInitials(p.nom,p.prenom)}}</span>@if (p.isActive === false) { ⊘ }{{p.nom}} {{p.prenom}}@if (p.entreprise) { ({{ p.entreprise.code || p.entreprise.nom }})}
+                </div>
+              }
+            </div>
+          }
+        </div>
+        <button class="p-btn-outline" (click)="exportExcel()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+        <button class="p-btn-outline" (click)="exportPDF()"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+        <button class="p-btn-primary" (click)="openCreate()"><i class="bi bi-plus-lg"></i> Application</button>
+      </div>
+    </div>
+  
+    <!-- ══════════════════════════════════════════ GANTT CONTAINER -->
+    <div class="gantt-container">
+      @if (isLoading) {
+        <div class="gantt-loading"><div class="spinner-border text-primary"></div></div>
+      }
+  
+      <!-- Sidebar fixe : NE scroll PAS seule, alignée sur les rows -->
+      <div class="gantt-sidebar">
+        <!-- Header de même hauteur que gt-header -->
+        <div class="gs-header">Applications</div>
+        <!-- Rows alignés sur gt-body -->
+        <div class="gs-rows">
+          @for (app of filteredApps; track app.id; let i = $index) {
+            <div class="gs-row"
+                 [class.gs-drag-over]="isDragOver(i)"
+                 draggable="true"
+                 (dragstart)="onDragStart($event, i)"
+                 (dragover)="onDragOver($event, i)"
+                 (drop)="onDrop($event, i)"
+                 (dragend)="onDragEnd()"
+                 (click)="openEdit(app)">
+              <span class="gs-drag"><i class="bi bi-grip-vertical"></i></span>
+              <span class="gs-dot" [style.background]="app.couleur"></span>
+              <div class="gs-info">
+                <!-- Ligne 1 : nom + badge -->
+                <div class="gs-line1">
+                  <span class="gs-name"
+                        [style.background]="app.couleur"
+                        [style.color]="'white'">{{app.nom}}</span>
+                  <span class="gs-badge" [ngClass]="getStatutClass(app.statut)">{{app.statut}}</span>
+                </div>
+                <!-- Ligne 2 : avatars -->
+                @if (app.prestataires.length) {
+                  <div class="gs-avatars">
+                    @for (p of app.prestataires.slice(0,5); track p.prestataireId) {
+                      <div class="gs-av"
+                           [class.gs-av-resp]="p.role==='RESP'"
+                           [title]="p.nomComplet + (p.role==='RESP' ? ' — Chef de projet' : ' — Prestataire')">
+                        @if (getAvatarUrlById(p.prestataireId)) {
+                          <img [src]="getAvatarUrlById(p.prestataireId)" class="gs-av-img">
+                        } @else {
+                          {{ getInitialsFromNom(p.nomComplet) }}
+                        }
+                      </div>
+                    }
+                    @if (app.prestataires.length > 5) {
+                      <div class="gs-av gs-av-more">+{{app.prestataires.length - 5}}</div>
+                    }
+                  </div>
+                }
+              </div>
+              <button class="gs-btn" (click)="openEdit(app);$event.stopPropagation()"><i class="bi bi-bar-chart"></i></button>
+            </div>
+          }
+          @if (filteredApps.length === 0) {
+            <div style="height:200px"></div>
+          }
+        </div>
+      </div>
+  
+      <!-- Zone scroll : TOUT le contenu timeline (header + body) -->
+      <div class="gantt-scroll" #ganttScroll>
+        <div [style.width.px]="totalWidth">
+  
+          <!-- Header sticky -->
+          <div class="gt-header">
+            <div class="gt-groups">
+              @for (g of groups; track g.label) {
+                <div class="gt-group" [style.width.px]="g.unitCount * cellWidth">{{g.label}}</div>
+              }
+            </div>
+            <div class="gt-units">
+              @for (u of units; track u.date.getTime()) {
+                <div class="gt-unit" [style.width.px]="cellWidth" [class.gt-unit-today]="u.isToday">
+                  {{u.label}}
+                </div>
+              }
+            </div>
+          </div>
+  
+          <!-- Body : barres + grille -->
+          <div class="gt-body" [style.height.px]="totalHeightPx || 200" [style.width.px]="totalWidth">
+  
+            <!-- Grille verticale -->
+            @for (u of units; track u.date.getTime(); let i = $index) {
+              <div class="gt-vline" [style.left.px]="i * cellWidth" [class.gt-vline-today]="u.isToday"></div>
+            }
+  
+            <!-- Grille horizontale -->
+            @for (app of filteredApps; track app.id; let i = $index) {
+              <div class="gt-hline" [style.top.px]="getRowTop(i+1)"></div>
+            }
+  
+            <!-- Ligne aujourd'hui -->
+            <div class="gt-todayline" [ngStyle]="todayLineStyle">
+              <span class="gt-today-label">Auj.</span>
+            </div>
+  
+            <!-- Barres -->
+            @for (app of filteredApps; track app.id; let i = $index) {
+              @if (getBarPosition(app); as pos) {
+                <div class="gt-bar"
+                     [style.left.px]="pos.left"
+                     [style.width.px]="pos.width"
+                     [style.top.px]="getRowTop(i) + 18"
+                     [style.height.px]="ROW_HEIGHT - 38"
+                     [style.background-color]="app.couleur"
+                     (click)="openEdit(app)"
+                     (mouseenter)="showTip($event,app)"
+                     (mouseleave)="hideTip()">
+                  <div class="gt-bar-prog"
+                       [style.width.px]="pos.width * app.avancement / 100"
+                       [style.background-color]="darkenColor(app.couleur, 35)"></div>
+                  <div class="gt-bar-content">
+                    <span class="gt-bar-name">{{app.nom}}</span>
+                    @if (app.avancement > 0) { <span class="gt-bar-pct">{{app.avancement}}%</span> }
+                  </div>
+                </div>
+              }
+            }
+  
+            <!-- Empty state -->
+            @if (!isLoading && filteredApps.length === 0) {
+              <div class="gt-empty">
+                <i class="bi bi-calendar-x"></i>
+                <p>Aucune application planifiée</p>
+                <button class="p-btn-primary" (click)="openCreate()"><i class="bi bi-plus-lg"></i> Créer</button>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- ══════════════════════════════════════════ TOOLTIP -->
+    @if (tooltip.show && tooltip.app) {
+      <div class="p-tooltip" [style.left.px]="tooltip.x" [style.top.px]="tooltip.y">
+        <div class="p-tt-hd" [style.background]="tooltip.app.couleur">{{tooltip.app.nom}}</div>
+        <div class="p-tt-bd">
+          <div><i class="bi bi-calendar-range"></i> {{tooltip.app.dateDebut|date:'dd/MM/yyyy'}} → {{tooltip.app.dateFin|date:'dd/MM/yyyy'}}</div>
+          <div><i class="bi bi-graph-up"></i> Avancement : <b>{{tooltip.app.avancement}}%</b></div>
+          <div><i class="bi bi-flag"></i> {{tooltip.app.statut}} · {{tooltip.app.priorite}}</div>
+          @if (tooltip.app.prestataires.length) {
+            <div><i class="bi bi-people"></i> {{tooltip.app.prestataires.map(p=>p.nomComplet).join(', ')}}</div>
+          }
+        </div>
+      </div>
+    }
+  
+    <!-- ══════════════════════════════════════════ MODAL FORM -->
+    @if (showModal) {
+      <div class="m-bd" (click)="closeModal()"></div>
+      <div class="m-panel d-block" (click)="$event.stopPropagation()">
+        <div class="m-hd">
+          <h2>{{ modalMode==='create' ? 'Nouvelle application' : "Modifier l'application" }}</h2>
+          <button class="m-x" (click)="closeModal()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <!--   Onglets : Général · Équipe · Serveurs -->
+        <div class="m-tabs">
+          <button type="button" class="m-tab"
+                  [class.active]="activeModalTab === 'general'"
+                  (click)="setModalTab('general')">
+            <i class="bi bi-info-circle"></i> Général
+            @if (dateErreur) { <span class="m-tab-dot m-tab-dot-err"></span> }
+          </button>
+          <button type="button" class="m-tab"
+                  [class.active]="activeModalTab === 'equipe'"
+                  (click)="setModalTab('equipe')">
+            <i class="bi bi-people"></i> Équipe
+            @if (formPrestataires.length + formResponsables.length > 0) {
+              <span class="m-tab-count">{{ formPrestataires.length + formResponsables.length }}</span>
+            }
+          </button>
+          <button type="button" class="m-tab"
+                  [class.active]="activeModalTab === 'serveurs'"
+                  (click)="setModalTab('serveurs')">
+            <i class="bi bi-hdd-rack"></i> Serveurs
+            @if (formServers.length > 0) {
+              <span class="m-tab-count">{{ formServers.length }}</span>
+            }
+          </button>
+        </div>
+
+        <div class="m-body">
+
+          <!-- ════════════════════════════════════ ONGLET GÉNÉRAL -->
+          @if (activeModalTab === 'general') {
+          <div class="fg"><label>Nom <span class="req">*</span></label>
+            <input class="fc" type="text" [(ngModel)]="formNom" placeholder="Ex: CRM Client"></div>
+          <div class="fg"><label>Description</label>
+            <textarea class="fc" [(ngModel)]="formDescription" rows="2" placeholder="Description..."></textarea></div>
+          <div class="fg2">
+            <div class="fg"><label>Début <span class="req">*</span></label>
+              <input class="fc" [class.fc-err]="dateErreur" type="date" [(ngModel)]="formDateDebut" (ngModelChange)="onDateChange()"></div>
+            <div class="fg"><label>Fin <span class="req">*</span></label>
+              <input class="fc" [class.fc-err]="dateErreur" type="date" [(ngModel)]="formDateFin" [min]="formDateDebut" (ngModelChange)="onDateChange()"></div>
+          </div>
+          @if (dateErreur) { <p class="date-err"><i class="bi bi-exclamation-triangle-fill"></i> {{dateErreur}}</p> }
+          <div class="fg2">
+            <div class="fg"><label>Statut</label>
+              <select class="fc" [(ngModel)]="formStatut">@for(s of STATUTS;track s){<option [value]="s">{{s}}</option>}</select></div>
+            <div class="fg"><label>Priorité</label>
+              <select class="fc" [(ngModel)]="formPriorite">@for(p of PRIORITES;track p){<option [value]="p">{{p}}</option>}</select></div>
+          </div>
+          <div class="fg"><label>Couleur</label>
+            <div class="cp-row">@for(c of COULEURS_PRESET;track c){
+              <button class="cp-btn" [style.background]="c" [class.cp-sel]="formCouleur===c&&!formCouleurCustom" (click)="selectCouleur(c)"></button>}
+            </div>
+            <div class="cp-custom">
+              <i class="bi bi-palette"></i>
+              <input type="color" class="cp-color-input" [(ngModel)]="formCouleurCustom" (ngModelChange)="onCustomColor()">
+              <input class="fc cp-hex" type="text" [(ngModel)]="formCouleurCustom" placeholder="#rrggbb" maxlength="7" (ngModelChange)="onCustomColor()">
+              <span class="cp-preview" [style.background]="formCouleur"></span>
+            </div>
+          </div>
+          <div class="fg"><label>Avancement : <b>{{formAvancement}}%</b></label>
+            <input type="range" class="frange" min="0" max="100" step="5" [(ngModel)]="formAvancement">
+            <div class="range-m"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+          </div>
+          } <!-- fin onglet GÉNÉRAL -->
+
+          <!-- ════════════════════════════════════ ONGLET ÉQUIPE -->
+          @if (activeModalTab === 'equipe') {
+          <!-- Prestataires dropdown -->
+          <div class="fg">
+            <label><i class="bi bi-person-workspace"></i> Prestataires
+              @if(formPrestataires.length){<span class="sel-cnt">{{formPrestataires.length}} sél.</span>}
+            </label>
+            @if(formPrestataires.length){
+              <div class="chips">@for(id of formPrestataires;track id){
+                <span class="chip chip-p"><span class="chip-av chip-av-p">{{getPrestInitialsById(id)}}</span>{{getPrestNomById(id)}}
+                  <button class="chip-x" (click)="togglePrest(id)"><i class="bi bi-x"></i></button></span>}
+              </div>}
+            <div class="dd" id="ddp">
+              <div class="dd-tr" (click)="showDdPrest=!showDdPrest"><i class="bi bi-search dd-ic"></i>
+                <span class="dd-ph">Rechercher...</span><i class="bi bi-chevron-down dd-ar" [class.rot]="showDdPrest"></i></div>
+              @if(showDdPrest){<div class="dd-menu">
+                <input class="dd-s" type="text" [(ngModel)]="searchPrest" placeholder="Filtrer..." (click)="$event.stopPropagation()">
+                <div class="dd-list">@for(p of (prestataires|searchPeople:searchPrest);track p.id){
+                  <div class="dd-item" [class.dd-sel]="isPrestSel(p.id!)" (click)="togglePrest(p.id!);$event.stopPropagation()">
+                    <div class="dd-av" [style.background]="isPrestSel(p.id!)?'#6366f1':'#e0e7ff'">
+                      @if(getAvatarUrl(p)){<img [src]="getAvatarUrl(p)" class="dd-img">}
+                      @else{<span [style.color]="isPrestSel(p.id!)?'white':'#6366f1'">{{getInitials(p.nom,p.prenom)}}</span>}
+                    </div>
+                    <span class="dd-nm">{{p.nom}} {{p.prenom}}@if (p.entreprise) { ({{ p.entreprise.code || p.entreprise.nom }})}</span>
+                    @if(isPrestSel(p.id!)){<i class="bi bi-check2 dd-ck"></i>}
+                  </div>}
+                  @if((prestataires|searchPeople:searchPrest).length===0){<p class="dd-empty">Aucun résultat</p>}
+                </div></div>}
+            </div>
+          </div>
+  
+          <!-- Responsables dropdown -->
+          <div class="fg">
+            <label><i class="bi bi-person-badge"></i> Chefs de projet
+              @if(formResponsables.length){<span class="sel-cnt sel-cnt-r">{{formResponsables.length}} sél.</span>}
+            </label>
+            @if(formResponsables.length){
+              <div class="chips">@for(id of formResponsables;track id){
+                <span class="chip chip-r"><span class="chip-av chip-av-r">{{getRespInitialsById(id)}}</span>{{getRespNomById(id)}}
+                  <button class="chip-x" (click)="toggleResp(id)"><i class="bi bi-x"></i></button></span>}
+              </div>}
+            <div class="dd" id="ddr">
+              <div class="dd-tr" (click)="showDdResp=!showDdResp"><i class="bi bi-search dd-ic"></i>
+                <span class="dd-ph">Rechercher...</span><i class="bi bi-chevron-down dd-ar" [class.rot]="showDdResp"></i></div>
+              @if(showDdResp){<div class="dd-menu">
+                <input class="dd-s" type="text" [(ngModel)]="searchResp" placeholder="Filtrer..." (click)="$event.stopPropagation()">
+                <div class="dd-list">@for(r of (responsables|searchPeople:searchResp);track r.id){
+                  <div class="dd-item dd-item-r" [class.dd-sel]="isRespSel(r.id!)" (click)="toggleResp(r.id!);$event.stopPropagation()">
+                    <div class="dd-av" [style.background]="isRespSel(r.id!)?'#2563eb':'#dbeafe'">
+                      @if(getAvatarUrl(r)){<img [src]="getAvatarUrl(r)" class="dd-img">}
+                      @else{<span [style.color]="isRespSel(r.id!)?'white':'#2563eb'">{{getInitials(r.nom,r.prenom)}}</span>}
+                    </div>
+                    <span class="dd-nm">{{r.nom}} {{r.prenom}}@if (r.entreprise) { ({{ r.entreprise.code || r.entreprise.nom }})}</span>
+                    @if(isRespSel(r.id!)){<i class="bi bi-check2 dd-ck" style="color:#2563eb"></i>}
+                  </div>}
+                  @if((responsables|searchPeople:searchResp).length===0){<p class="dd-empty">Aucun résultat</p>}
+                </div></div>}
+            </div>
+          </div>
+          } <!-- fin onglet ÉQUIPE -->
+
+          <!-- ════════════════════════════════════ ONGLET SERVEURS -->
+          @if (activeModalTab === 'serveurs') {
+          <div class="fg srv-section">
+            <label>
+              <i class="bi bi-hdd-rack"></i> Serveurs &amp; environnements
+              @if (formServers.length) { <span class="sel-cnt sel-cnt-s">{{formServers.length}}</span> }
+              <button type="button" class="srv-add-btn" (click)="addServer('DEV')">
+                <i class="bi bi-plus-lg"></i> Ajouter
+              </button>
+            </label>
+
+            @if (formServers.length === 0) {
+              <div class="srv-empty">
+                <i class="bi bi-hdd-network"></i>
+                <span>Aucun serveur enregistré.</span>
+                <button type="button" class="srv-empty-btn" (click)="addServer('DEV')">
+                  <i class="bi bi-plus-circle"></i> Ajouter un serveur
+                </button>
+              </div>
+            } @else {
+              <div class="srv-list">
+                @for (srv of formServers; track $index; let i = $index) {
+                  <div class="srv-row">
+                    <select class="fc srv-type" [(ngModel)]="srv.type" [name]="'srvType' + i"
+                            [ngClass]="getServerTypeClass(srv.type)">
+                      @for (t of SERVER_TYPES; track t) {
+                        <option [value]="t">{{ SERVER_TYPE_LABELS[t] }}</option>
+                      }
+                    </select>
+                    <input class="fc srv-ident" type="text"
+                           [(ngModel)]="srv.identifiant" [name]="'srvIdent' + i"
+                           placeholder="Identifiant (ex: X72SDEIGX6J)">
+                    <input class="fc srv-libelle" type="text"
+                           [(ngModel)]="srv.libelle" [name]="'srvLib' + i"
+                           placeholder="Libellé (facultatif)">
+                    <button type="button" class="srv-del" (click)="removeServer(i)" title="Supprimer">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                  <div class="srv-note-wrap" [class.has-link]="isUrl(srv.note)">
+                    <input class="fc srv-note" type="text"
+                           [(ngModel)]="srv.note" [name]="'srvNote' + i"
+                           placeholder="Note (URL, hostname, port…) — facultatif">
+                    @if (isUrl(srv.note)) {
+                      <button type="button" class="srv-note-open"
+                              (click)="openUrl(srv.note)"
+                              title="Ouvrir dans un nouvel onglet">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          } <!-- fin onglet SERVEURS -->
+
+        </div>
+        <div class="m-ft">
+          @if(modalMode==='edit'){<button class="btn-del" (click)="confirmDelete()"><i class="bi bi-trash"></i> Supprimer</button>}
+          <div class="m-ft-r">
+            <button class="btn-cncl" (click)="closeModal()">Annuler</button>
+            <button class="btn-save" (click)="enregistrer()" [disabled]="!!dateErreur">
+              {{modalMode==='create'?'Créer':'Enregistrer'}}</button>
+          </div>
+        </div>
+      </div>
+    }
+  
+    <!-- ══════════════════════════════════════════ MODAL DELETE -->
+    @if (showDeleteConfirm && appToDelete) {
+      <div class="m-bd" (click)="cancelDelete()"></div>
+      <div class="m-panel m-sm" (click)="$event.stopPropagation()">
+        <div class="m-hd danger"><h2><i class="bi bi-exclamation-triangle me-2"></i>Supprimer ?</h2>
+          <button class="m-x" (click)="cancelDelete()"><i class="bi bi-x-lg"></i></button></div>
+        <div class="m-body"><p>Supprimer <b>{{appToDelete.nom}}</b> ?</p><p class="text-muted small">Action irréversible.</p></div>
+        <div class="m-ft"><div class="m-ft-r">
+          <button class="btn-cncl" (click)="cancelDelete()">Annuler</button>
+          <button class="btn-del" (click)="doDelete()"><i class="bi bi-trash me-1"></i>Supprimer</button>
+        </div></div>
+      </div>
+    }
+  </div>

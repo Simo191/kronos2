@@ -1,0 +1,93 @@
+<div class="login-page">
+
+  <!-- Arrière-plan animé -->
+  <div class="bg-shapes">
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+    <div class="shape shape-3"></div>
+  </div>
+
+  <div class="login-wrapper">
+
+    <!-- Carte de connexion -->
+    <div class="login-card">
+
+      <div class="login-card-header">
+        <!-- Logo à l'intérieur de la carte -->
+        <div class="logo-box">
+          <app-logo-prestapro [mini]="false" [showText]="true"></app-logo-prestapro>
+        </div>
+        <h2 class="login-title">Connexion</h2>
+        <p class="login-subtitle">Accédez à votre espace</p>
+      </div>
+
+      <div class="login-card-body">
+        <form (ngSubmit)="onSubmit()">
+
+          <!-- Email -->
+          <div class="field-group">
+            <label class="field-label">Email</label>
+            <div class="field-input">
+              <span class="field-icon"><i class="bi bi-envelope-fill"></i></span>
+              <input
+                type="email"
+                class="form-control"
+                [(ngModel)]="email"
+                name="email"
+                placeholder="votre@email.com"
+                required
+                [disabled]="isLoading"
+                autocomplete="email"
+              />
+            </div>
+          </div>
+
+          <!-- Mot de passe -->
+          <div class="field-group">
+            <label class="field-label">Mot de passe</label>
+            <div class="field-input">
+              <span class="field-icon"><i class="bi bi-lock-fill"></i></span>
+              <input
+                type="password"
+                class="form-control"
+                [(ngModel)]="password"
+                name="password"
+                placeholder="••••••••"
+                required
+                [disabled]="isLoading"
+                autocomplete="current-password"
+              />
+            </div>
+          </div>
+<!-- Rester connecté -->
+<div class="field-group remember-me">
+  <label class="remember-label">
+    <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
+    <span>Rester connecté</span>
+  </label>
+</div>
+          <!-- Erreur -->
+          @if (errorMessage) {
+            <div class="login-error">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              {{ errorMessage }}
+            </div>
+          }
+
+          <!-- Bouton -->
+          <button type="submit" class="login-btn" [disabled]="isLoading">
+            @if (isLoading) {
+              <span class="spinner-border spinner-border-sm me-2"></span>
+              Connexion en cours...
+            } @else {
+              <i class="bi bi-box-arrow-in-right me-2"></i>
+              Se connecter
+            }
+          </button>
+
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>

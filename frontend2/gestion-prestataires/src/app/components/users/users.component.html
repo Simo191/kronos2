@@ -1,0 +1,638 @@
+<div class="users-container">
+  <!-- Header avec titre et actions -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <h1 class="page-title">
+          <i class="bi bi-people-fill"></i>
+          Gestion des Utilisateurs
+        </h1>
+        <p class="page-subtitle">Gérez les comptes et les permissions des utilisateurs</p>
+      </div>
+      <div class="header-actions">
+        <!-- Toggle Liste / Cartes -->
+        <div class="btn-group me-2" role="group">
+          <button class="btn btn-outline-secondary btn-sm"
+                  [class.active]="viewMode === 'list'"
+                  (click)="viewMode = 'list'"
+                  title="Vue liste">
+            <i class="bi bi-list-ul"></i> Liste
+          </button>
+          <button class="btn btn-outline-secondary btn-sm"
+                  [class.active]="viewMode === 'cards'"
+                  (click)="viewMode = 'cards'"
+                  title="Vue cartes">
+            <i class="bi bi-grid-3x3-gap-fill"></i> Cartes
+          </button>
+        </div>
+        <button class="btn btn-primary" (click)="openModal()">
+          <i class="bi bi-plus-lg"></i>
+          <span class="btn-text">Nouvel Utilisateur</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ NOTIFICATIONS TOAST -->
+  @if (successMessage) {
+    <div class="notification-toast success-toast">
+      <div class="toast-content">
+        <i class="bi bi-check-circle-fill"></i>
+        <span>{{ successMessage }}</span>
+      </div>
+      <button class="toast-close" (click)="successMessage = ''">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="notification-toast error-toast">
+      <div class="toast-content">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+      <button class="toast-close" (click)="errorMessage = ''">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+  }
+
+  <!-- Filtres et recherche -->
+  <div class="filters-card">
+    <div class="filters-header">
+      <h5 class="filters-title">
+        <i class="bi bi-funnel"></i>
+        Filtres et Recherche
+      </h5>
+      <button class="btn btn-sm btn-link" (click)="resetFilters()">
+        <i class="bi bi-arrow-counterclockwise"></i>
+        Réinitialiser
+      </button>
+    </div>
+    <div class="filters-body">
+      <div class="row g-3">
+        <div class="col-md-5">
+          <div class="search-box">
+            <i class="bi bi-search search-icon"></i>
+            <input 
+              type="text" 
+              class="form-control" 
+              [(ngModel)]="searchTerm" 
+              placeholder="Rechercher par email, prénom ou nom..."
+            >
+          </div>
+        </div>
+        <div class="col-md-3">
+          <select class="form-select" [(ngModel)]="filterRole">
+            <option value="">Tous les rôles</option>
+            @for (role of roles; track role.id) {
+              <option [value]="role.id">{{ role.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select class="form-select" [(ngModel)]="filterStatus">
+            <option value="">Tous les statuts</option>
+            <option value="true">Actifs</option>
+            <option value="false">Inactifs</option>
+          </select>
+        </div>
+        <div class="col-md-1">
+          <div class="results-count">
+            <span class="badge bg-primary">{{ filteredUsers.length }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  @if (isLoading) {
+    <div class="loading-container">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="loading-text">Chargement des utilisateurs...</p>
+    </div>
+  }
+
+  <!-- ══════════════ VUE LISTE ══════════════ -->
+  @if (!isLoading && viewMode === 'list') {
+    <div class="table-card">
+      <div class="table-responsive">
+        <table class="table users-table">
+          <thead>
+            <tr>
+              <th><div class="th-content"><i class="bi bi-envelope"></i> Email</div></th>
+              <th><div class="th-content"><i class="bi bi-person"></i> Prénom</div></th>
+              <th><div class="th-content"><i class="bi bi-person"></i> Nom</div></th>
+              <th><div class="th-content"><i class="bi bi-shield"></i> Rôle</div></th>
+              <th><div class="th-content"><i class="bi bi-person-badge"></i> Prestataire</div></th>
+              <th><div class="th-content"><i class="bi bi-toggle-on"></i> Statut</div></th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of paginatedUsers; track user.id) {
+              <tr class="user-row">
+                <td><div class="user-email"><i class="bi bi-envelope-fill text-primary"></i> {{ user.email }}</div></td>
+                <td><span class="user-name">{{ user.firstName }}</span></td>
+                <td><span class="user-name">{{ user.lastName }}</span></td>
+                <td>
+                  <span class="role-badge" [class.role-admin]="user.role?.name === 'Admin'">
+                    <i class="bi bi-shield-fill"></i> {{ user.role?.name || 'N/A' }}
+                  </span>
+                </td>
+                <td>
+                  @if (getPrestataireForUser(user.id!); as prestataire) {
+                    <span class="prestataire-badge"><i class="bi bi-link-45deg"></i> {{ prestataire.prenom }} {{ prestataire.nom }}</span>
+                  } @else {
+                    <span class="text-muted"><i class="bi bi-dash"></i> Non lié</span>
+                  }
+                </td>
+                <td>
+                  <span class="status-badge" [class.status-active]="user.isActive" [class.status-inactive]="!user.isActive"
+                        (click)="toggleUserActivation(user)" style="cursor:pointer"
+                        title="Cliquer pour {{ user.isActive ? 'désactiver' : 'activer' }}">
+                    @if (user.isActive) { <i class="bi bi-check-circle-fill"></i> Actif }
+                    @else { <i class="bi bi-x-circle-fill"></i> Inactif }
+                  </span>
+                </td>
+                <td>
+                  <div class="action-buttons">
+                    <button class="btn-action btn-edit"   (click)="openModal(user)"             title="Modifier"><i class="bi bi-pencil-fill"></i></button>
+                    <button class="btn-action btn-email"  (click)="openTempPasswordModal(user)" title="Envoyer identifiants"><i class="bi bi-envelope-fill"></i></button>
+                    <button class="btn-action btn-delete" (click)="confirmDelete(user)"          title="Supprimer"><i class="bi bi-trash-fill"></i></button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty-state"><div class="empty-content"><i class="bi bi-inbox"></i><p class="empty-title">Aucun utilisateur trouvé</p></div></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (totalPages > 1) {
+        <div class="pagination-container">
+          <div class="pagination-info">Affichage {{ startIndex }} à {{ endIndex }} sur {{ filteredUsers.length }} résultats</div>
+          <nav><ul class="pagination">
+            <li class="page-item" [class.disabled]="currentPage === 1"><button class="page-link" (click)="goToPage(currentPage - 1)"><i class="bi bi-chevron-left"></i></button></li>
+            @for (page of pages; track page) { <li class="page-item" [class.active]="currentPage === page"><button class="page-link" (click)="goToPage(page)">{{ page }}</button></li> }
+            <li class="page-item" [class.disabled]="currentPage === totalPages"><button class="page-link" (click)="goToPage(currentPage + 1)"><i class="bi bi-chevron-right"></i></button></li>
+          </ul></nav>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ══════════════ VUE CARTES ══════════════ -->
+  @if (!isLoading && viewMode === 'cards') {
+    @if (filteredUsers.length === 0) {
+      <div class="empty-state py-5 text-center">
+        <i class="bi bi-inbox display-4 text-muted"></i>
+        <p class="empty-title mt-2">Aucun utilisateur trouvé</p>
+      </div>
+    } @else {
+      <div class="row g-3 mb-3">
+        @for (user of paginatedUsers; track user.id) {
+          <div class="col-lg-4 col-md-6 col-12">
+            <div class="card border-0 shadow-sm h-100 user-card-item" [class.user-card-inactive]="!user.isActive">
+              <div class="card-body p-3">
+
+                <!-- Header : avatar + nom + menu 3 points -->
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div class="d-flex align-items-center">
+                    <div class="contrat-avatar-wrap me-2">
+                      @if (getPrestataireForUser(user.id!); as p) {
+                        @if (getAvatarUrl(p.imageUrl)) {
+                          <img [src]="getAvatarUrl(p.imageUrl)!" class="contrat-avatar-img" [alt]="p.prenom" (error)="p.imageUrl = undefined">
+                        } @else {
+                          <div class="user-avatar-circle">{{ getInitials(p.nom, p.prenom) }}</div>
+                        }
+                      } @else {
+                        <div class="user-avatar-circle">{{ user.firstName.charAt(0) }}{{ user.lastName.charAt(0) }}</div>
+                      }
+                    </div>
+                    <div>
+                      <h6 class="mb-0 fw-bold">{{ user.firstName }} {{ user.lastName }}</h6>
+                      <span class="role-badge" [class.role-admin]="user.role?.name === 'Admin'" style="font-size:11px">
+                        <i class="bi bi-shield-fill"></i> {{ user.role?.name || 'N/A' }}
+                      </span>
+                    </div>
+                  </div>
+                  <!-- Menu 3 points (style contrats) -->
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                      <li>
+                        <a class="dropdown-item" href="#" (click)="$event.preventDefault(); openModal(user)">
+                          <i class="bi bi-pencil text-primary me-2"></i>Modifier
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="#" (click)="$event.preventDefault(); openTempPasswordModal(user)">
+                          <i class="bi bi-envelope text-info me-2"></i>Envoyer identifiants
+                        </a>
+                      </li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li>
+                        <a class="dropdown-item" href="#" (click)="$event.preventDefault(); toggleUserActivation(user)">
+                          @if (user.isActive) {
+                            <i class="bi bi-pause-circle text-warning me-2"></i>Désactiver
+                          } @else {
+                            <i class="bi bi-play-circle text-success me-2"></i>Activer
+                          }
+                        </a>
+                      </li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li>
+                        <a class="dropdown-item text-danger" href="#" (click)="$event.preventDefault(); confirmDelete(user)">
+                          <i class="bi bi-trash me-2"></i>Supprimer
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Email -->
+                <div class="mb-2">
+                  <small class="text-muted"><i class="bi bi-envelope-fill me-1 text-primary"></i>{{ user.email }}</small>
+                </div>
+
+                <!-- Prestataire lié -->
+                @if (getPrestataireForUser(user.id!); as prestataire) {
+                  <div class="mb-2">
+                    <span class="prestataire-badge" style="font-size:11px">
+                      <i class="bi bi-link-45deg"></i> {{ prestataire.prenom }} {{ prestataire.nom }}
+                    </span>
+                  </div>
+                }
+
+                <!-- Statut -->
+                <div class="pt-2 border-top mt-2">
+                  <span class="status-badge" [class.status-active]="user.isActive" [class.status-inactive]="!user.isActive"
+                        (click)="toggleUserActivation(user)" style="cursor:pointer"
+                        title="Cliquer pour {{ user.isActive ? 'désactiver' : 'activer' }}">
+                    @if (user.isActive) { <i class="bi bi-check-circle-fill"></i> Actif }
+                    @else { <i class="bi bi-x-circle-fill"></i> Inactif }
+                  </span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (totalPages > 1) {
+        <div class="pagination-container">
+          <div class="pagination-info">Affichage {{ startIndex }} à {{ endIndex }} sur {{ filteredUsers.length }} résultats</div>
+          <nav><ul class="pagination">
+            <li class="page-item" [class.disabled]="currentPage === 1"><button class="page-link" (click)="goToPage(currentPage - 1)"><i class="bi bi-chevron-left"></i></button></li>
+            @for (page of pages; track page) { <li class="page-item" [class.active]="currentPage === page"><button class="page-link" (click)="goToPage(page)">{{ page }}</button></li> }
+            <li class="page-item" [class.disabled]="currentPage === totalPages"><button class="page-link" (click)="goToPage(currentPage + 1)"><i class="bi bi-chevron-right"></i></button></li>
+          </ul></nav>
+        </div>
+      }
+    }
+  }
+</div>
+
+<!-- ✅ POPUP CONFIRMATION SUPPRESSION -->
+@if (showDeleteConfirm) {
+  <div class="modal-overlay" (click)="cancelDelete()">
+    <div class="confirm-modal" (click)="$event.stopPropagation()">
+      <div class="confirm-icon danger">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </div>
+      
+      <h3 class="confirm-title">Confirmer la suppression</h3>
+      
+      <p class="confirm-message">
+        Êtes-vous sûr de vouloir supprimer l'utilisateur
+        <strong>{{ userToDelete?.firstName }} {{ userToDelete?.lastName }}</strong> ?
+      </p>
+      
+      <p class="confirm-warning">
+        <i class="bi bi-info-circle-fill"></i>
+        Cette action est irréversible.
+      </p>
+      
+      <div class="confirm-actions">
+        <button class="btn btn-secondary" (click)="cancelDelete()">
+          <i class="bi bi-x-circle"></i>
+          Annuler
+        </button>
+        <button class="btn btn-danger" (click)="deleteUser()">
+          <i class="bi bi-trash-fill"></i>
+          Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Modal de création/édition -->
+@if (isModalOpen) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <i class="bi bi-person-circle"></i>
+          {{ isEditMode ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur' }}
+        </h2>
+        <button class="btn-close-modal" (click)="closeModal()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="bi bi-envelope"></i>
+              Adresse email
+              <span class="required">*</span>
+            </label>
+            <input 
+              type="email" 
+              class="form-control" 
+              [(ngModel)]="selectedUser.email" 
+              name="email" 
+              placeholder="exemple@email.com"
+              required
+            >
+          </div>
+
+          @if (!isEditMode) {
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-key"></i>
+                Mot de passe
+                <span class="required">*</span>
+              </label>
+              <input 
+                type="password" 
+                class="form-control" 
+                [(ngModel)]="selectedUser.password" 
+                name="password"
+                placeholder="••••••••"
+                required
+              >
+            </div>
+          }
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-person"></i>
+                  Prénom
+                  <span class="required">*</span>
+                </label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  [(ngModel)]="selectedUser.firstName" 
+                  name="firstName"
+                  placeholder="Prénom"
+                  required
+                >
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-person"></i>
+                  Nom
+                  <span class="required">*</span>
+                </label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  [(ngModel)]="selectedUser.lastName" 
+                  name="lastName"
+                  placeholder="Nom"
+                  required
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <i class="bi bi-shield"></i>
+              Rôle
+              <span class="required">*</span>
+            </label>
+            <select 
+              class="form-select" 
+              [(ngModel)]="selectedUser.roleId" 
+              name="roleId"
+              required
+            >
+              <option value="">-- Sélectionner un rôle --</option>
+              @for (role of roles; track role.id) {
+                <option [value]="role.id">{{ role.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <i class="bi bi-person-badge"></i>
+              Prestataire lié
+              <span class="text-muted">(optionnel)</span>
+            </label>
+            <select 
+              class="form-select" 
+              [(ngModel)]="selectedUser.prestataireId" 
+              name="prestataireId"
+            >
+              <option [value]="null">-- Aucun prestataire --</option>
+              @for (prestataire of availablePrestataires; track prestataire.id) {
+                <option [value]="prestataire.id">
+                  {{ prestataire.prenom }} {{ prestataire.nom }} ({{ prestataire.email }})
+                </option>
+              }
+            </select>
+            <small class="form-text text-muted">
+              <i class="bi bi-info-circle"></i>
+              Un prestataire ne peut être lié qu'à un seul utilisateur
+            </small>
+          </div>
+
+          <div class="form-group">
+            <div class="form-check-custom">
+              <input 
+                class="form-check-input" 
+                type="checkbox" 
+                [(ngModel)]="selectedUser.isActive" 
+                name="isActive" 
+                id="isActive"
+              >
+              <label class="form-check-label" for="isActive">
+                <i class="bi bi-toggle-on"></i>
+                Compte actif
+              </label>
+            </div>
+            <small class="form-text text-muted">
+              <i class="bi bi-info-circle"></i>
+              Les comptes inactifs ne peuvent pas se connecter
+            </small>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()">
+          <i class="bi bi-x-circle"></i>
+          Annuler
+        </button>
+        <button class="btn btn-primary" (click)="saveUser()">
+          <i class="bi bi-check-circle"></i>
+          {{ isEditMode ? 'Mettre à jour' : 'Créer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+<!-- ✅ MODAL MOT DE PASSE TEMPORAIRE - À AJOUTER À LA FIN DE users.component.html -->
+
+<!-- Modal Mot de Passe Temporaire -->
+@if (showTempPasswordModal) {
+  <div class="modal-backdrop-custom show"></div>
+  <div class="modal-custom">
+    <div class="modal-dialog-custom modal-dialog-centered">
+      <div class="modal-content-custom">
+        
+        <!-- Header -->
+        <div class="modal-header-custom">
+          <h5 class="modal-title-custom">
+            <i class="bi bi-envelope-fill me-2"></i>
+            Envoyer Email avec Mot de Passe Temporaire
+          </h5>
+          <button type="button" class="btn-close-custom" (click)="closeTempPasswordModal()">
+            ✕
+          </button>
+        </div>
+        
+        <!-- Body -->
+        <div class="modal-body-custom">
+          <!-- Avertissement -->
+          <div class="alert alert-warning mb-3">
+            <div class="d-flex align-items-start">
+              <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 1.25rem;"></i>
+              <div>
+                <strong>ATTENTION</strong>
+                <p class="mb-1 mt-1">Vous allez envoyer un email avec un mot de passe temporaire.</p>
+                <p class="mb-0">Le mot de passe actuel de l'utilisateur sera modifié dans la base de données.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Info utilisateur -->
+          @if (tempPasswordUser) {
+            <div class="user-info-box mb-3">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar-small">
+                  @if (tempPasswordUser && getPrestataireForUser(tempPasswordUser.id!); as p) {
+                    @if (getAvatarUrl(p.imageUrl)) {
+                      <img [src]="getAvatarUrl(p.imageUrl)!" style="width:100%;height:100%;border-radius:50%;object-fit:cover" [alt]="p.prenom">
+                    } @else {
+                      {{ tempPasswordUser.firstName.charAt(0) }}{{ tempPasswordUser.lastName.charAt(0) }}
+                    }
+                  } @else {
+                    {{ tempPasswordUser.firstName.charAt(0) }}{{ tempPasswordUser.lastName.charAt(0) }}
+                  }
+                </div>
+                <div class="ms-3">
+                  <div class="fw-bold">{{ tempPasswordUser.firstName }} {{ tempPasswordUser.lastName }}</div>
+                  <div class="text-muted small">{{ tempPasswordUser.email }}</div>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Input mot de passe -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              <i class="bi bi-key-fill me-2"></i>
+              Mot de passe temporaire
+            </label>
+            <input 
+              type="text" 
+              class="form-control"
+              [(ngModel)]="newTempPassword"
+              placeholder="Entrez un mot de passe (min. 6 caractères)"
+              [class.is-invalid]="tempPasswordError"
+              (keyup.enter)="confirmSendTempPassword()"
+              autofocus
+            >
+            @if (tempPasswordError) {
+              <div class="invalid-feedback d-block">
+                <i class="bi bi-exclamation-circle-fill me-1"></i>
+                {{ tempPasswordError }}
+              </div>
+            }
+            <small class="form-text text-muted">
+              <i class="bi bi-info-circle me-1"></i>
+              Ce mot de passe sera enregistré dans la base de données
+            </small>
+          </div>
+
+          <!-- Instructions -->
+          <div class="instructions-box">
+            <h6 class="mb-2"><i class="bi bi-list-check me-2"></i>Actions effectuées :</h6>
+            <ol class="mb-0 ps-3">
+              <li>Le mot de passe sera mis à jour dans la base de données</li>
+              <li>Un email sera envoyé avec le nouveau mot de passe</li>
+              <li>L'utilisateur pourra se connecter avec ce nouveau mot de passe</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer-custom">
+          <button type="button" class="btn btn-secondary" (click)="closeTempPasswordModal()">
+            <i class="bi bi-x-circle me-2"></i>
+            Annuler
+          </button>
+          <button type="button" class="btn btn-primary" (click)="confirmSendTempPassword()">
+            <i class="bi bi-send-fill me-2"></i>
+            Enregistrer et Envoyer Email
+          </button>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ✅ MODAL CONFIRMATION EMAIL BIENVENUE (remplace confirm natif) -->
+@if (showWelcomePrompt) {
+  <div class="modal-overlay" (click)="cancelWelcomeEmail()">
+    <div class="confirm-modal" (click)="$event.stopPropagation()">
+      <div class="confirm-icon" style="background: #e3f2fd; color: #1976d2;">
+        <i class="bi bi-envelope-fill"></i>
+      </div>
+      <h3 class="confirm-title">Envoyer un email de bienvenue ?</h3>
+      <p class="confirm-message">
+        Voulez-vous envoyer les identifiants de connexion à
+        <strong>{{ welcomePromptNom }}</strong> ?
+      </p>
+      <p class="confirm-message text-muted" style="font-size: 0.85rem;">
+        <i class="bi bi-envelope me-1"></i>{{ welcomePromptEmail }}
+      </p>
+      <div class="confirm-actions">
+        <button class="btn btn-secondary" (click)="cancelWelcomeEmail()">
+          <i class="bi bi-x-circle me-1"></i>Non, ignorer
+        </button>
+        <button class="btn btn-primary" (click)="confirmWelcomeEmail()">
+          <i class="bi bi-send-fill me-1"></i>Oui, envoyer
+        </button>
+      </div>
+    </div>
+  </div>
+}

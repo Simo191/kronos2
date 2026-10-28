@@ -1,0 +1,322 @@
+<div class="wrapper">
+  <!-- Sidebar -->
+  <nav id="sidebar" [class.collapsed]="sidebarCollapsed">
+    <div class="sidebar-header">
+      @if (!sidebarCollapsed) {
+        <!-- Logo expanded : boîte blanche dans le sidebar -->
+        <div class="logo-container-sidebar">
+          <div class="logo-box-sidebar">
+            <app-logo-prestapro [mini]="true" src="/KRONOS_logmenu.svg" [showText]="true"></app-logo-prestapro>
+          </div>
+        </div>
+      } @else {
+        <!-- Logo collapsed : icône centrée dans un cercle -->
+        <div class="logo-container-sidebar-collapsed">
+          <div class="logo-box-sidebar-mini">
+            <app-logo-prestapro [mini]="true" [showText]="false"></app-logo-prestapro>
+          </div>
+        </div>
+      }
+    </div>
+
+    <ul class="list-unstyled components">
+      <!-- ✅ DASHBOARD : Toujours visible en haut -->
+      <li>
+        <a routerLink="/dashboard" routerLinkActive="active" class="sidebar-link">
+          <i class="bi bi-speedometer2"></i>
+          @if (!sidebarCollapsed) {
+            <span>Tableau de bord</span>
+          }
+        </a>
+      </li>
+
+      <!-- ✅ SECTION OPÉRATIONS -->
+      @if (!sidebarCollapsed && canViewOperations()) {
+        <li class="menu-section">
+          <div class="section-header" (click)="toggleSection('operations')">
+            <div class="section-title">
+              <i class="bi bi-briefcase-fill section-icon"></i>
+              <span>OPÉRATIONS</span>
+            </div>
+            <i class="bi" [class.bi-chevron-down]="!sections.operations" 
+               [class.bi-chevron-up]="sections.operations"></i>
+          </div>
+          
+          <ul class="section-items" [class.collapsed]="!sections.operations">
+            <li *hasPermission="Permission.VIEW_PLANNING">
+              <a routerLink="/shift-planning" routerLinkActive="active" class="sidebar-link">
+                <i class="bi bi-clock-fill"></i>
+                <span>Planning</span>
+              </a>
+            </li>
+            
+            <li *hasPermission="Permission.VIEW_PRESTATAIRES">
+              <a routerLink="/prestataires" routerLinkActive="active" class="sidebar-link">
+                <i class="bi bi-people-fill"></i>
+                <span>Collaborateurs</span>
+              </a>
+            </li>
+            
+            <li *hasPermission="Permission.VIEW_CONTRATS">
+              <a routerLink="/contrats" routerLinkActive="active" class="sidebar-link">
+                <i class="bi bi-file-earmark-text-fill"></i>
+                <span>Contrats</span>
+              </a>
+            </li>
+            
+            <li *hasPermission="Permission.VIEW_JOURS_TRAVAIL">
+              <a routerLink="/jours-travail" routerLinkActive="active" class="sidebar-link">
+                <i class="bi bi-calendar-check-fill"></i>
+                <span>Jours de travail</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+      } @else {
+        <!-- Mode collapsed : afficher items sans sections -->
+        <li *hasPermission="Permission.VIEW_PLANNING">
+          <a routerLink="/shift-planning" routerLinkActive="active" class="sidebar-link" title="Planning">
+            <i class="bi bi-clock-fill"></i>
+          </a>
+        </li>
+        <li *hasPermission="Permission.VIEW_PRESTATAIRES">
+          <a routerLink="/prestataires" routerLinkActive="active" class="sidebar-link" title="Prestataires">
+            <i class="bi bi-people-fill"></i>
+          </a>
+        </li>
+        <li *hasPermission="Permission.VIEW_CONTRATS">
+          <a routerLink="/contrats" routerLinkActive="active" class="sidebar-link" title="Contrats">
+            <i class="bi bi-file-earmark-text-fill"></i>
+          </a>
+        </li>
+        <li *hasPermission="Permission.VIEW_JOURS_TRAVAIL">
+          <a routerLink="/jours-travail" routerLinkActive="active" class="sidebar-link" title="Jours Travail">
+            <i class="bi bi-calendar-check-fill"></i>
+          </a>
+        </li>
+      }
+
+      <!-- ✅ SECTION FINANCE -->
+      @if (!sidebarCollapsed && canViewFinance()) {
+        <li class="menu-section">
+          <div class="section-header" (click)="toggleSection('finance')">
+            <div class="section-title">
+              <i class="bi bi-cash-stack section-icon"></i>
+              <span>FINANCE</span>
+            </div>
+            <i class="bi" [class.bi-chevron-down]="!sections.finance" 
+               [class.bi-chevron-up]="sections.finance"></i>
+          </div>
+          
+          <ul class="section-items" [class.collapsed]="!sections.finance">
+
+            <li *hasPermission="Permission.VIEW_CAGNOTTES">
+              <a routerLink="/cagnottes" routerLinkActive="active" class="sidebar-link">
+                <i class="bi bi-wallet2"></i>
+                <span>Budget</span>
+              </a>
+            </li>
+            
+            <li *hasPermission="Permission.VIEW_CAGNOTTES">
+              <a routerLink="/estimations" routerLinkActive="active" class="sidebar-link">
+                <i class="bi bi-calculator-fill"></i>
+                <span>Estimation Budget</span>
+              </a>
+            </li>
+            
+           
+            
+            <li *hasPermission="Permission.VIEW_TYPE_CONTRAT">
+              <a routerLink="/gestion-verrouillages" routerLinkActive="active" class="sidebar-link">
+                <i class="bi bi-lock-fill"></i>
+                <span>Verrouillages</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+      } @else {
+        <li *hasPermission="Permission.VIEW_CAGNOTTES">
+          <a routerLink="/estimations" routerLinkActive="active" class="sidebar-link" title="Estimation Budget">
+            <i class="bi bi-calculator-fill"></i>
+          </a>
+        </li>
+        <li *hasPermission="Permission.VIEW_CAGNOTTES">
+          <a routerLink="/cagnottes" routerLinkActive="active" class="sidebar-link" title="Cagnottes">
+            <i class="bi bi-wallet2"></i>
+          </a>
+        </li>
+        <li *hasPermission="Permission.VIEW_TYPE_CONTRAT">
+          <a routerLink="/gestion-verrouillages" routerLinkActive="active" class="sidebar-link" title="Verrouillages">
+            <i class="bi bi-lock-fill"></i>
+          </a>
+        </li>
+      }
+
+      <!-- ✅ SECTION PARAMÈTRES -->
+      @if (!sidebarCollapsed && canViewParametres()) {
+        <li class="menu-section">
+          <div class="section-header" (click)="toggleSection('config')">
+            <div class="section-title">
+              <i class="bi bi-gear-fill section-icon"></i>
+              <span>PARAMÈTRES</span>
+            </div>
+            <i class="bi" [class.bi-chevron-down]="!sections.config" 
+               [class.bi-chevron-up]="sections.config"></i>
+          </div>
+          
+          <ul class="section-items" [class.collapsed]="!sections.config">
+            <li *hasPermission="Permission.VIEW_TYPE_PLANNING">
+              <a routerLink="/type-shift" routerLinkActive="active" class="sidebar-link">
+                <i class="bi bi-tag-fill"></i>
+                <span>Types Planning</span>
+              </a>
+            </li>
+            
+            <li *hasPermission="Permission.VIEW_TYPE_CONTRAT">
+              <a routerLink="/types-contrat" routerLinkActive="active" class="sidebar-link">
+                <i class="bi bi-clipboard-check-fill"></i>
+                <span>Types Contrat</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+      } @else {
+        <li *hasPermission="Permission.VIEW_TYPE_PLANNING">
+          <a routerLink="/type-shift" routerLinkActive="active" class="sidebar-link" title="Types Planning">
+            <i class="bi bi-tag-fill"></i>
+          </a>
+        </li>
+        <li *hasPermission="Permission.VIEW_TYPE_CONTRAT">
+          <a routerLink="/types-contrat" routerLinkActive="active" class="sidebar-link" title="Types Contrat">
+            <i class="bi bi-clipboard-check-fill"></i>
+          </a>
+        </li>
+      }
+
+      <!-- ✅ SECTION ADMINISTRATION -->
+      @if (!sidebarCollapsed && canViewAdministration()) {
+        <li class="menu-section">
+          <div class="section-header" (click)="toggleSection('admin')">
+            <div class="section-title">
+              <i class="bi bi-shield-lock-fill section-icon"></i>
+              <span>ADMINISTRATION</span>
+            </div>
+            <i class="bi" [class.bi-chevron-down]="!sections.admin" 
+               [class.bi-chevron-up]="sections.admin"></i>
+          </div>
+          
+          <ul class="section-items" [class.collapsed]="!sections.admin">
+            <li *hasPermission="Permission.VIEW_USERS">
+              <a routerLink="/users" routerLinkActive="active" class="sidebar-link">
+                <i class="bi bi-person-badge-fill"></i>
+                <span>Utilisateurs</span>
+              </a>
+            </li>
+            
+            <li *hasPermission="Permission.VIEW_ROLES">
+              <a routerLink="/roles" routerLinkActive="active" class="sidebar-link">
+                <i class="bi bi-shield-fill-check"></i>
+                <span>Rôles</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+      } @else {
+        <li *hasPermission="Permission.VIEW_USERS">
+          <a routerLink="/users" routerLinkActive="active" class="sidebar-link" title="Utilisateurs">
+            <i class="bi bi-person-badge-fill"></i>
+          </a>
+        </li>
+        <li *hasPermission="Permission.VIEW_ROLES">
+          <a routerLink="/roles" routerLinkActive="active" class="sidebar-link" title="Rôles">
+            <i class="bi bi-shield-fill-check"></i>
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <!-- Page Content -->
+  <div id="content">
+    <!-- Top Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm" style="padding: 0px !important;">
+      <div class="container-fluid">
+        <button type="button" id="sidebarCollapse" class="btn btn-outline-primary" (click)="toggleSidebar()">
+          <i class="bi bi-list"></i>
+        </button>
+
+        <!-- ✅ INDICATEUR BUDGET : Admin uniquement -->
+        @if (selectedCagnotte && canViewCagnottes()) {
+          <div class="budget-compact" [ngClass]="budgetClass">
+            <span class="budget-icon-sm">🗼</span>
+            
+            <select 
+              class="year-select-compact"
+              [(ngModel)]="selectedAnnee"
+              (ngModelChange)="onAnneeChange()">
+              @for (c of cagnottes; track c.id) {
+                <option [value]="c.annee">
+                  {{ c.annee }}@if (isActuelle(c.annee)) { ★}
+                </option>
+              }
+            </select>
+        
+            <div class="amount-compact">{{ formatMontant(selectedCagnotte.budgetRestant) }}</div>
+            
+            <div class="progress-mini-inline">
+              <div class="bar-fill" [style.width.%]="getProgressPercentage()"></div>
+            </div>
+          </div>
+        }
+
+        <div class="ms-auto d-flex align-items-center">
+          @if (currentUser) {
+            <div class="dropdown">
+              <button class="btn btn-link text-decoration-none d-flex align-items-center" 
+                      type="button" 
+                      id="userDropdown" 
+                      (click)="toggleUserDropdown()">
+                <div class="user-avatar me-2">
+                  @if (currentPrestataire && getAvatarUrl(currentPrestataire.imageUrl)) {
+                    <img [src]="getAvatarUrl(currentPrestataire.imageUrl)!"
+                         class="navbar-avatar-img"
+                         [alt]="currentUser.firstName"
+                         (error)="currentPrestataire.imageUrl = undefined">
+                  } @else {
+                    <i class="bi bi-person-circle"></i>
+                  }
+                </div>
+                <div class="text-start d-none d-md-block">
+                  <div class="fw-bold">{{ currentUser.firstName }} {{ currentUser.lastName }}</div>
+                  <small class="text-muted">{{ currentUser.email }}</small>
+                </div>
+                <i class="bi bi-chevron-down ms-2"></i>
+              </button>
+              
+              @if (showUserDropdown) {
+                <ul class="dropdown-menu dropdown-menu-end show" style="position: absolute; right: 0;">
+                  <li>
+                    <a class="dropdown-item" routerLink="/profil" (click)="closeUserDropdown()">
+                      <i class="bi bi-person me-2"></i>Profil
+                    </a>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <a class="dropdown-item text-danger" (click)="logout()" style="cursor: pointer;">
+                      <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
+                    </a>
+                  </li>
+                </ul>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>

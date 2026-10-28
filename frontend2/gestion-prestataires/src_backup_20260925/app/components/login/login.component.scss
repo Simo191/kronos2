@@ -1,0 +1,258 @@
+// ========================================================================
+// LOGIN PAGE — Layout complet
+// ========================================================================
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 50%, #f5f0ff 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+// ---- Formes d'arrière-plan animées ----
+.bg-shapes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.12;
+  animation: float 8s ease-in-out infinite;
+}
+
+.shape-1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #3b5bdb, #7048e8);
+  top: -120px;
+  left: -100px;
+  animation-delay: 0s;
+}
+
+.shape-2 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #7048e8, #cc5de8);
+  bottom: -80px;
+  right: -80px;
+  animation-delay: 3s;
+}
+
+.shape-3 {
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, #3b5bdb, #74c0fc);
+  top: 40%;
+  right: 15%;
+  animation-delay: 1.5s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-20px) scale(1.04); }
+}
+
+// ---- Wrapper centré ----
+.login-wrapper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 420px;
+}
+
+// ========================================================================
+// CARTE DE CONNEXION
+// ========================================================================
+
+.login-card {
+  width: 100%;
+  background: white;
+  border-radius: 20px;
+  box-shadow:
+    0 20px 60px rgba(30, 45, 107, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.login-card-header {
+  padding: 36px 40px 20px;
+  text-align: center;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+// ---- Logo DANS la carte ----
+.logo-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #30387F;
+  border-radius: 16px;
+  padding: 16px 28px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(30, 45, 107, 0.25);
+
+  ::ng-deep app-logo-prestapro {
+    display: block;
+    img, svg, div { max-height: 100px !important; max-width: 180px !important; }
+    img { height: 94px; width: auto; display: block; margin: 0 auto; }
+  }
+}
+
+.login-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e2d6b;
+  margin: 0 0 6px;
+  letter-spacing: -0.3px;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.login-card-body {
+  padding: 28px 40px 36px;
+}
+
+// ========================================================================
+// CHAMPS DU FORMULAIRE
+// ========================================================================
+
+.field-group {
+  margin-bottom: 20px;
+}
+
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 8px;
+  letter-spacing: 0.2px;
+}
+
+.field-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field-icon {
+  position: absolute;
+  left: 14px;
+  color: #94a3b8;
+  font-size: 15px;
+  z-index: 1;
+  pointer-events: none;
+  transition: color 0.2s;
+}
+
+.field-input:focus-within .field-icon {
+  color: #3b5bdb;
+}
+
+.field-input .form-control {
+  padding-left: 42px;
+  height: 48px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  background: #f8fafc;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+
+  &:focus {
+    border-color: #3b5bdb;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.12);
+    outline: none;
+  }
+
+  &::placeholder {
+    color: #cbd5e1;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// ========================================================================
+// ERREUR
+// ========================================================================
+
+.login-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #e11d48;
+  margin-bottom: 20px;
+
+  i { font-size: 14px; flex-shrink: 0; }
+}
+
+// ========================================================================
+// BOUTON SE CONNECTER
+// ========================================================================
+
+.login-btn {
+  width: 100%;
+  height: 50px;
+  background: linear-gradient(135deg, #3b5bdb 0%, #7048e8 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(59, 91, 219, 0.35);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(59, 91, 219, 0.45);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+// ========================================================================
+// RESPONSIVE
+// ========================================================================
+
+@media (max-width: 480px) {
+  .login-card-header { padding: 28px 24px 16px; }
+  .login-card-body   { padding: 20px 24px 28px; }
+  .logo-box          { padding: 16px 24px; }
+}

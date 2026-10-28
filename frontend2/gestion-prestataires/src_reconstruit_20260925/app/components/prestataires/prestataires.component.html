@@ -1,0 +1,1530 @@
+<div class="container-fluid px-4 py-4">
+  
+  <!-- EN-TÊTE -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1">
+        <i class="bi bi-people-fill me-2 text-primary"></i>Gestion des collaborateurs
+      </h1>
+      <p class="text-muted mb-0">Gérez vos collaborateurs et leurs informations</p>
+    </div>
+    <div class="d-flex gap-2">
+      <div class="btn-group" role="group">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          [class.active]="viewMode === 'list'"
+          (click)="toggleViewMode('list')">
+          <i class="bi bi-list-ul"></i> Liste
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          [class.active]="viewMode === 'cards'"
+          (click)="toggleViewMode('cards')">
+          <i class="bi bi-grid-3x3-gap-fill"></i> Cartes
+        </button>
+      </div>
+      @if (canManagePrestataires()) {
+        <button class="btn btn-primary px-4" (click)="openModal()">
+          <i class="bi bi-plus-lg me-2"></i>Nouveau collaborateur
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- CARTES STATISTIQUES — masquées pour User (1 seul collab, pas de TJM) -->
+  @if (canManagePrestataires()) {
+  <div class="row g-3 mb-4">
+    <div class="col-lg-3 col-md-6 col-12">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-primary-subtle">
+              <i class="bi bi-people-fill text-primary"></i>
+            </div>
+            <div class="ms-3">
+              <h3 class="mb-0 fw-bold">{{ totalPrestataires }}</h3>
+              <p class="text-muted mb-0 small">TOTAL COLLABORATEURS</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    @if (canViewTJM()) {
+      <div class="col-lg-3 col-md-6 col-12">
+        <div class="card border-0 shadow-sm stat-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-success-subtle">
+                <i class="bi bi-currency-euro text-success"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ tjmMoyen | formatMontant }}</h3>
+                <p class="text-muted mb-0 small">TJM MOYEN</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6 col-12">
+        <div class="card border-0 shadow-sm stat-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-warning-subtle">
+                <i class="bi bi-graph-up text-warning"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ tjmMax | formatMontant }}</h3>
+                <p class="text-muted mb-0 small">TJM MAXIMUM</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6 col-12">
+        <div class="card border-0 shadow-sm stat-card">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="stat-icon bg-danger-subtle">
+                <i class="bi bi-graph-down text-danger"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-bold">{{ tjmMin | formatMontant }}</h3>
+                <p class="text-muted mb-0 small">TJM MINIMUM</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+  }
+
+  <!-- NOTIFICATIONS -->
+  <!-- ✅ Système de notifications centralisé -->
+  <app-notification-toast></app-notification-toast>
+
+
+  <!-- TABLEAU/CARTES -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      
+      <!-- BARRE DE FILTRES -->
+      <!-- BARRE DE FILTRES - EXACTEMENT COMME CONTRATS -->
+@if (canManagePrestataires()) {
+<div class="p-3 border-bottom bg-light">
+  <div class="row g-3 align-items-center">
+
+    <!-- RECHERCHE -->
+    <div class="col-lg-4 col-md-6 col-12">
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0">
+          <i class="bi bi-search text-muted"></i>
+        </span>
+        <input 
+          type="text" 
+          class="form-control border-start-0 ps-0" 
+          placeholder="Rechercher un collaborateur..."
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="applyFilters()">
+      </div>
+    </div>
+    
+    <!-- FILTRE TOUS LES PRESTATAIRES (ne sert à rien mais pour l'esthétique) -->
+    <div class="col-lg-2 col-md-6 col-12">
+      <select class="form-select" [(ngModel)]="filterPrestataire" (ngModelChange)="applyFilters()">
+        <option value="">Tous les collaborateurs</option>
+        @for (p of prestataires; track p.id) {
+          <option [value]="p.id">{{ p.nom }} {{ p.prenom }}@if (p.entreprise) { ({{ p.entreprise.code || p.entreprise.nom }})}</option>
+        }
+      </select>
+    </div>
+    
+    <!-- FILTRE TYPE (si vous voulez filtrer par type de contrat) -->
+    <div class="col-lg-2 col-md-4 col-12">
+      <select class="form-select" [(ngModel)]="filterTJM" (ngModelChange)="applyFilters()">
+        <option value="">Tous les TJM</option>
+        <option value="0-500">0€ - 500€</option>
+        <option value="500-700">500€ - 700€</option>
+        <option value="700+">700€+</option>
+      </select>
+    </div>
+    
+    <!-- FILTRE STATUT actif/désactivé -->
+    <div class="col-lg-2 col-md-4 col-12">
+      <select class="form-select" [(ngModel)]="filterStatut" (ngModelChange)="applyFilters()">
+        <option value="">Tous les statuts</option>
+        <option value="actif">Actifs</option>
+        <option value="inactif">Désactivés</option>
+      </select>
+    </div>
+    
+    <!-- TRIER PAR -->
+    <div class="col-lg-2 col-md-4 col-12">
+      <div class="input-group">
+        <select class="form-select" [(ngModel)]="sortBy" (ngModelChange)="applyFilters()">
+          <option value="">Trier par...</option>
+          <option value="nom">Nom</option>
+          <option value="tjm-asc">TJM (croissant)</option>
+          <option value="tjm-desc">TJM (décroissant)</option>
+        </select>
+        <button class="btn btn-outline-secondary" 
+        type="button"
+        (click)="toggleSortDirection()">
+  <i class="bi" 
+     [class.bi-sort-down]="sortDirection === 'asc'" 
+     [class.bi-sort-up]="sortDirection === 'desc'"></i>
+</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+}
+
+      <!-- LOADER -->
+      @if (isLoading) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+        </div>
+      } @else {
+        
+        @if (viewMode === 'list') {
+          <!-- VUE LISTE -->
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted">Collaborateur</th>
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted">Contact</th>
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted">TJM</th>
+                  <th class="px-4 py-3 text-uppercase small fw-semibold text-muted text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- ✅ GROUPE : INTERNES -->
+                @if (groupedInterns.length > 0) {
+                  <tr class="group-header-row group-interne" (click)="toggleInternes()" style="cursor:pointer;">
+                    <td colspan="4" class="group-header-cell">
+                      <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                          <i class="bi bi-person-badge-fill me-2"></i>
+                          Internes <span class="group-count ms-2">{{ groupedInterns.length }}</span>
+                        </div>
+                        <i class="bi" [ngClass]="internesCollapsed ? 'bi-chevron-right' : 'bi-chevron-down'"></i>
+                      </div>
+                    </td>
+                  </tr>
+                  @if (!internesCollapsed) {
+                    @for (prestataire of groupedInterns; track prestataire.id) {
+                    <tr [class.is-inactive]="prestataire.isActive === false">
+                      <td class="px-4 py-3">
+                        <div class="d-flex align-items-center">
+                          <div class="avatar-prest-wrap">
+                            @if (getAvatarUrl(prestataire.imageUrl)) {
+                              <img [src]="getAvatarUrl(prestataire.imageUrl)!"
+                                   class="avatar-prest-img"
+                                   alt="{{ prestataire.prenom }}"
+                                   (error)="prestataire.imageUrl = undefined">
+                            } @else {
+                              <div class="avatar-prest-initials">
+                                {{ getInitials(prestataire.nom, prestataire.prenom) }}
+                              </div>
+                            }
+                          </div>
+                          @if (prestataire.isActive === false) {
+                            <span class="row-deactivated-badge has-tooltip ms-2">
+                              <i class="bi bi-slash-circle me-1"></i>
+                              <span>Désactivé</span>
+                              @if (prestataire.deactivationReason) {
+                                <span class="banner-sep">·</span>
+                                <span class="text-truncate">{{ prestataire.deactivationReason }}</span>
+                              }
+                              <span class="custom-tooltip">{{ getDeactivationTooltip(prestataire) }}</span>
+                            </span>
+                          }
+                        </div>
+                      </td>
+                      <td class="px-4 py-3">
+                        <div class="mb-1">
+                          <i class="bi bi-envelope me-2 text-muted"></i>
+                          <span>{{ prestataire.email }}</span>
+                        </div>
+                        <div>
+                          <i class="bi bi-telephone me-2 text-muted"></i>
+                          <span>{{ prestataire.telephone || 'Non renseigné' }}</span>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3">
+                        <span class="badge bg-primary text-white px-3 py-2">Interne</span>
+                      </td>
+                      <td class="px-4 py-3 text-end">
+                        <div class="dropdown">
+                          <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                              <a class="dropdown-item" href="#" (click)="$event.preventDefault(); openModal(prestataire)">
+                                <i class="bi bi-pencil text-primary me-2"></i>Modifier
+                              </a>
+                            </li>
+                            <li>
+                              <a class="dropdown-item" href="#" (click)="$event.preventDefault(); confirmToggleActive(prestataire)">
+                                @if (prestataire.isActive === false) {
+                                  <i class="bi bi-check-circle text-success me-2"></i>Activer
+                                } @else {
+                                  <i class="bi bi-slash-circle text-warning me-2"></i>Désactiver
+                                }
+                              </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                              <a class="dropdown-item text-danger" href="#" (click)="$event.preventDefault(); confirmDelete(prestataire)">
+                                <i class="bi bi-trash me-2"></i>Supprimer
+                              </a>
+                            </li>
+                          </ul>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                  } <!-- end !internesCollapsed -->
+                }
+
+                <!-- ✅ GROUPE : PRESTATAIRES -->
+                @if (groupedPrestataires.length > 0) {
+                  <tr class="group-header-row group-prestataire" (click)="togglePrestataires()" style="cursor:pointer;">
+                    <td colspan="4" class="group-header-cell">
+                      <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                          <i class="bi bi-person-workspace me-2"></i>
+                          Prestataires <span class="group-count ms-2">{{ groupedPrestataires.length }}</span>
+                        </div>
+                        <i class="bi" [ngClass]="prestatairesCollapsed ? 'bi-chevron-right' : 'bi-chevron-down'"></i>
+                      </div>
+                    </td>
+                  </tr>
+                  @if (!prestatairesCollapsed) {
+                    @for (prestataire of groupedPrestataires; track prestataire.id) {
+                    <tr [class.is-inactive]="prestataire.isActive === false">
+                      <td class="px-4 py-3">
+                        <div class="d-flex align-items-center">
+                          <div class="avatar-prest-wrap">
+                            @if (getAvatarUrl(prestataire.imageUrl)) {
+                              <img [src]="getAvatarUrl(prestataire.imageUrl)!"
+                                   class="avatar-prest-img"
+                                   alt="{{ prestataire.prenom }}"
+                                   (error)="prestataire.imageUrl = undefined">
+                            } @else {
+                              <div class="avatar-prest-initials">
+                                {{ getInitials(prestataire.nom, prestataire.prenom) }}
+                              </div>
+                            }
+                          </div>
+                          @if (prestataire.isActive === false) {
+                            <span class="row-deactivated-badge has-tooltip ms-2">
+                              <i class="bi bi-slash-circle me-1"></i>
+                              <span>Désactivé</span>
+                              @if (prestataire.deactivationReason) {
+                                <span class="banner-sep">·</span>
+                                <span class="text-truncate">{{ prestataire.deactivationReason }}</span>
+                              }
+                              <span class="custom-tooltip">{{ getDeactivationTooltip(prestataire) }}</span>
+                            </span>
+                          }
+                        </div>
+                      </td>
+                      <td class="px-4 py-3">
+                        <div class="mb-1">
+                          <i class="bi bi-envelope me-2 text-muted"></i>
+                          <span>{{ prestataire.email }}</span>
+                        </div>
+                        <div>
+                          <i class="bi bi-telephone me-2 text-muted"></i>
+                          <span>{{ prestataire.telephone || 'Non renseigné' }}</span>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3">
+                        @if (canViewTJM()) {
+                          <span class="badge bg-success text-white px-3 py-2">{{ prestataire.tjm }}€/j</span>
+                        } @else {
+                          <span class="text-muted">—</span>
+                        }
+                      </td>
+                      <td class="px-4 py-3 text-end">
+                        <div class="dropdown">
+                          <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                              <a class="dropdown-item" href="#" (click)="$event.preventDefault(); openModal(prestataire)">
+                                <i class="bi bi-pencil text-primary me-2"></i>Modifier
+                              </a>
+                            </li>
+                            <li>
+                              <a class="dropdown-item" href="#" (click)="$event.preventDefault(); confirmToggleActive(prestataire)">
+                                @if (prestataire.isActive === false) {
+                                  <i class="bi bi-check-circle text-success me-2"></i>Activer
+                                } @else {
+                                  <i class="bi bi-slash-circle text-warning me-2"></i>Désactiver
+                                }
+                              </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                              <a class="dropdown-item text-danger" href="#" (click)="$event.preventDefault(); confirmDelete(prestataire)">
+                                <i class="bi bi-trash me-2"></i>Supprimer
+                              </a>
+                            </li>
+                          </ul>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                  } <!-- end !prestatairesCollapsed -->
+                }
+
+                <!-- ✅ VIDE -->
+                @if (groupedInterns.length === 0 && groupedPrestataires.length === 0) {
+                  <tr>
+                    <td colspan="4" class="text-center py-5">
+                      <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                      <p class="text-muted">Aucun collaborateur trouvé</p>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <!-- VUE CARTES -->
+          <div class="p-4">
+
+            <!-- ✅ Boutons globaux expand/collapse -->
+            @if (groupedInterns.length > 0 || groupedPrestataires.length > 0) {
+              <div class="d-flex justify-content-end gap-2 mb-3">
+                <button class="btn btn-sm btn-outline-secondary" (click)="expandAll()" [disabled]="!allCollapsed">
+                  <i class="bi bi-arrows-expand me-1"></i>Tout ouvrir
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" (click)="collapseAll()" [disabled]="allCollapsed">
+                  <i class="bi bi-arrows-collapse me-1"></i>Tout réduire
+                </button>
+              </div>
+            }
+
+            <!-- ✅ GROUPE INTERNES -->
+            @if (groupedInterns.length > 0) {
+              <div class="group-section-header group-section-interne mb-3"
+                   (click)="toggleInternes()" style="cursor:pointer;">
+                <div class="d-flex align-items-center justify-content-between w-100">
+                  <div class="d-flex align-items-center">
+                    <i class="bi bi-person-badge-fill me-2"></i>
+                    Internes
+                    <span class="group-count ms-2">{{ groupedInterns.length }}</span>
+                  </div>
+                  <i class="bi" [ngClass]="internesCollapsed ? 'bi-chevron-right' : 'bi-chevron-down'"></i>
+                </div>
+              </div>
+              @if (!internesCollapsed) {
+                <div class="row g-3 mb-4">
+                  @for (prestataire of groupedInterns; track prestataire.id) {
+                  <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100 prestataire-card card-interne"
+                         [class.is-inactive]="prestataire.isActive === false">
+
+                      <!--   Bannière de désactivation : icône + motif visible + tooltip date complète -->
+                      @if (prestataire.isActive === false) {
+                        <div class="card-deactivated-banner has-tooltip">
+                          <i class="bi bi-slash-circle me-2"></i>
+                          <span class="fw-semibold">Désactivé</span>
+                          @if (prestataire.deactivationReason) {
+                            <span class="banner-sep">·</span>
+                            <span class="banner-reason text-truncate">{{ prestataire.deactivationReason }}</span>
+                          }
+                          <span class="custom-tooltip">{{ getDeactivationTooltip(prestataire) }}</span>
+                        </div>
+                      }
+
+                      <div class="card-body p-3">
+
+                        <!-- HEADER : avatar + nom + badge + menu -->
+                        <div class="d-flex align-items-start justify-content-between mb-2">
+                          <div class="d-flex align-items-center gap-2">
+                            <!-- Avatar image ou initiales -->
+                            <div class="avatar-prest-wrap">
+                              @if (getAvatarUrl(prestataire.imageUrl)) {
+                                <img [src]="getAvatarUrl(prestataire.imageUrl)!"
+                                     class="avatar-prest-img"
+                                     alt="{{ prestataire.prenom }}"
+                                     (error)="prestataire.imageUrl = undefined">
+                              } @else {
+                                <div class="avatar-prest-initials avatar-responsable">
+                                  {{ getInitials(prestataire.nom, prestataire.prenom) }}
+                                </div>
+                              }
+                            </div>
+                            <!-- Nom + badge type -->
+                            <div>
+                              <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h6 class="mb-0 fw-bold lh-1">{{ prestataire.prenom }} {{ prestataire.nom }}</h6>
+                                <span class="badge-role badge-responsable">
+                                  <i class="bi bi-person-badge-fill me-1"></i>Interne
+                                </span>
+                              </div>
+                              <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                                <span class="badge bg-primary-subtle text-primary" style="font-size: 11px;">
+                                  <i class="bi bi-building me-1"></i>Équipe interne
+                                </span>
+                                @if (prestataire.entreprise) {
+                                  <span class="badge-role badge-entreprise"
+                                        [title]="prestataire.entreprise.nom">
+                                    <i class="bi bi-building me-1"></i>{{ prestataire.entreprise.nom }}
+                                  </span>
+                                }
+                              </div>
+                            </div>
+                          </div>
+                          <!-- Menu 3 points -->
+                          <div class="dropdown">
+                            <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                              <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                              @if (canManagePrestataires()) {
+                                <li>
+                                  <a class="dropdown-item" href="#" (click)="$event.preventDefault(); openModal(prestataire)">
+                                    <i class="bi bi-pencil text-primary me-2"></i>Modifier
+                                  </a>
+                                </li>
+                              }
+                              @if (canSeeCredentials(prestataire)) {
+                                <li>
+                                  <a class="dropdown-item" href="#" (click)="$event.preventDefault(); openCredentialsModal(prestataire)">
+                                    <i class="bi bi-key text-info me-2"></i>Comptes &amp; mots de passe
+                                  </a>
+                                </li>
+                              }
+                              @if (canManagePrestataires()) {
+                                <li>
+                                  <a class="dropdown-item" href="#" (click)="$event.preventDefault(); confirmToggleActive(prestataire)">
+                                    @if (prestataire.isActive === false) {
+                                      <i class="bi bi-check-circle text-success me-2"></i>Activer
+                                    } @else {
+                                      <i class="bi bi-slash-circle text-warning me-2"></i>Désactiver
+                                    }
+                                  </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                  <a class="dropdown-item text-danger" href="#" (click)="$event.preventDefault(); confirmDelete(prestataire)">
+                                    <i class="bi bi-trash me-2"></i>Supprimer
+                                  </a>
+                                </li>
+                              }
+                            </ul>
+                          </div>
+                        </div>
+
+                        <!-- Contact compact -->
+                        <div class="mb-2 card-contact-row">
+                          <div class="d-flex align-items-center mb-1">
+                            <i class="bi bi-envelope me-2 text-muted" style="font-size:12px;"></i>
+                            <span class="small text-truncate">{{ prestataire.email }}</span>
+                          </div>
+                          <div class="d-flex align-items-center">
+                            <i class="bi bi-telephone me-2 text-muted" style="font-size:12px;"></i>
+                            <span class="small">{{ prestataire.telephone || 'Non renseigné' }}</span>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+              } <!-- end !internesCollapsed -->
+            }
+
+            <!-- ✅ GROUPE PRESTATAIRES -->
+            @if (groupedPrestataires.length > 0) {
+              <div class="group-section-header group-section-prestataire mb-3"
+                   (click)="togglePrestataires()" style="cursor:pointer;">
+                <div class="d-flex align-items-center justify-content-between w-100">
+                  <div class="d-flex align-items-center">
+                    <i class="bi bi-person-workspace me-2"></i>
+                    Prestataires
+                    <span class="group-count ms-2">{{ groupedPrestataires.length }}</span>
+                  </div>
+                  <i class="bi" [ngClass]="prestatairesCollapsed ? 'bi-chevron-right' : 'bi-chevron-down'"></i>
+                </div>
+              </div>
+              @if (!prestatairesCollapsed) {
+                <div class="row g-3">
+                  @for (prestataire of groupedPrestataires; track prestataire.id) {
+                  <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm h-100 prestataire-card"
+                         [class.is-inactive]="prestataire.isActive === false">
+
+                      <!--   Bannière de désactivation : icône + motif visible + tooltip date complète -->
+                      @if (prestataire.isActive === false) {
+                        <div class="card-deactivated-banner has-tooltip">
+                          <i class="bi bi-slash-circle me-2"></i>
+                          <span class="fw-semibold">Désactivé</span>
+                          @if (prestataire.deactivationReason) {
+                            <span class="banner-sep">·</span>
+                            <span class="banner-reason text-truncate">{{ prestataire.deactivationReason }}</span>
+                          }
+                          <span class="custom-tooltip">{{ getDeactivationTooltip(prestataire) }}</span>
+                        </div>
+                      }
+
+                      <div class="card-body p-3">
+
+                        <!-- HEADER : avatar + nom + badge + menu -->
+                        <div class="d-flex align-items-start justify-content-between mb-2">
+                          <div class="d-flex align-items-center gap-2">
+                            <!-- Avatar image ou initiales -->
+                            <div class="avatar-prest-wrap">
+                              @if (getAvatarUrl(prestataire.imageUrl)) {
+                                <img [src]="getAvatarUrl(prestataire.imageUrl)!"
+                                     class="avatar-prest-img"
+                                     alt="{{ prestataire.prenom }}"
+                                     (error)="prestataire.imageUrl = undefined">
+                              } @else {
+                                <div class="avatar-prest-initials">
+                                  {{ getInitials(prestataire.nom, prestataire.prenom) }}
+                                </div>
+                              }
+                            </div>
+                            <!-- Nom + TJM + badge type -->
+                            <div>
+                              <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h6 class="mb-0 fw-bold lh-1">{{ prestataire.prenom }} {{ prestataire.nom }}</h6>
+                                <span class="badge-role badge-prestataire">
+                                  <i class="bi bi-person-workspace me-1"></i>Prestataire
+                                </span>
+                              </div>
+                              <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                                @if (canViewTJM()) {
+                                  <span class="badge bg-success text-white" style="font-size: 11px;">{{ prestataire.tjm }}€/jour</span>
+                                }
+                                @if (prestataire.entreprise) {
+                                  <span class="badge-role badge-entreprise"
+                                        [title]="prestataire.entreprise.nom">
+                                    <i class="bi bi-building me-1"></i>{{ prestataire.entreprise.nom }}
+                                  </span>
+                                }
+                              </div>
+                            </div>
+                          </div>
+                          <!-- Menu 3 points -->
+                          <div class="dropdown">
+                            <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                              <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                              @if (canManagePrestataires()) {
+                                <li>
+                                  <a class="dropdown-item" href="#" (click)="$event.preventDefault(); openModal(prestataire)">
+                                    <i class="bi bi-pencil text-primary me-2"></i>Modifier
+                                  </a>
+                                </li>
+                              }
+                              @if (canSeeCredentials(prestataire)) {
+                                <li>
+                                  <a class="dropdown-item" href="#" (click)="$event.preventDefault(); openCredentialsModal(prestataire)">
+                                    <i class="bi bi-key text-info me-2"></i>Comptes &amp; mots de passe
+                                  </a>
+                                </li>
+                              }
+                              @if (canManagePrestataires()) {
+                                <li>
+                                  <a class="dropdown-item" href="#" (click)="$event.preventDefault(); confirmToggleActive(prestataire)">
+                                    @if (prestataire.isActive === false) {
+                                      <i class="bi bi-check-circle text-success me-2"></i>Activer
+                                    } @else {
+                                      <i class="bi bi-slash-circle text-warning me-2"></i>Désactiver
+                                    }
+                                  </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                  <a class="dropdown-item text-danger" href="#" (click)="$event.preventDefault(); confirmDelete(prestataire)">
+                                    <i class="bi bi-trash me-2"></i>Supprimer
+                                  </a>
+                                </li>
+                              }
+                            </ul>
+                          </div>
+                        </div>
+
+                        <!-- Contact compact -->
+                        <div class="mb-2 card-contact-row">
+                          <div class="d-flex align-items-center mb-1">
+                            <i class="bi bi-envelope me-2 text-muted" style="font-size:12px;"></i>
+                            <span class="small text-truncate">{{ prestataire.email }}</span>
+                          </div>
+                          <div class="d-flex align-items-center">
+                            <i class="bi bi-telephone me-2 text-muted" style="font-size:12px;"></i>
+                            <span class="small">{{ prestataire.telephone || 'Non renseigné' }}</span>
+                          </div>
+                        </div>
+
+                        <!-- Mini-cartes contrats -->
+                        @if (getContratsForPrestataire(prestataire.id).length > 0) {
+                          <div class="mb-0">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                              <small class="text-muted fw-semibold">
+                                <i class="bi bi-file-earmark-text me-1"></i>Contrats
+                              </small>
+                              <span class="badge bg-primary-subtle text-primary">
+                                {{ getActiveContratsCount(prestataire.id) }} actif(s)
+                              </span>
+                              <span class="badge bg-secondary-subtle text-secondary ms-1">
+                                {{ getTotalContratsCount(prestataire.id) }} total
+                              </span>
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap">
+                              @for (contrat of getContratsForPrestataire(prestataire.id); track contrat.id) {
+                                <div 
+                                  class="mini-contrat-card" 
+                                  (click)="viewContrat(contrat)"
+                                  [class.contrat-actif]="isContratActif(contrat)"
+                                  [class.contrat-termine]="!isContratActif(contrat)">
+                                  <div class="mini-contrat-header mb-1">
+                                    <div class="mini-contrat-type fw-bold">
+                                      {{ contrat.typeContrat?.nom || contrat.typeContrat?.libelle || 'N/A' }}
+                                    </div>
+                                    <span class="badge badge-sm" 
+                                          [class.bg-success]="isContratActif(contrat)"
+                                          [class.bg-secondary]="!isContratActif(contrat)">
+                                      {{ isContratActif(contrat) ? 'Actif' : 'Terminé' }}
+                                    </span>
+                                  </div>
+                                  <div class="mini-contrat-dates">
+                                    <div class="small text-muted">
+                                      <i class="bi bi-calendar-check me-1"></i>{{ formatDate(contrat.dateDebut) }}
+                                    </div>
+                                    <div class="small text-muted">
+                                      <i class="bi bi-calendar-x me-1"></i>{{ formatDate(contrat.dateFin) }}
+                                    </div>
+                                  </div>
+                                  @if (isContratActif(contrat)) {
+                                    <div class="mini-contrat-jours mt-1">
+                                      <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-clock me-1"></i>{{ getJoursRestants(contrat) }}j restants
+                                      </span>
+                                    </div>
+                                  }
+                                </div>
+                              }
+                            </div>
+                            <div class="mt-3" *hasPermission="Permission.VIEW_CONTRATS">
+                              <button class="btn btn-sm btn-outline-primary w-100" (click)="viewHistorique(prestataire)">
+                                <i class="bi bi-clock-history me-1"></i>Voir l'historique complet
+                              </button>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+              } <!-- end !prestatairesCollapsed -->
+            }
+
+            <!-- ✅ VIDE -->
+            @if (groupedInterns.length === 0 && groupedPrestataires.length === 0) {
+              <div class="col-12">
+                <div class="text-center py-5">
+                  <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                  <p class="text-muted">Aucun collaborateur trouvé</p>
+                </div>
+              </div>
+            }
+
+          </div>
+        }
+
+        <!-- PAGINATION -->
+        @if (filteredPrestataires.length > pageSize) {
+          <div class="p-3 border-top bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+              <small class="text-muted">
+                Affichage de {{ startItemIndex }} à {{ endItemIndex }} sur {{ filteredPrestataires.length }} prestataires
+              </small>
+              <nav>
+                <ul class="pagination pagination-sm mb-0">
+                  <li class="page-item" [class.disabled]="currentPage === 1">
+                    <button class="page-link" (click)="prevPage()">Précédent</button>
+                  </li>
+                  @for (page of pageNumbers; track page) {
+                    <li class="page-item" [class.active]="page === currentPage">
+                      <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+                    </li>
+                  }
+                  <li class="page-item" [class.disabled]="currentPage === totalPages">
+                    <button class="page-link" (click)="nextPage()">Suivant</button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+@if (isModalOpen) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-person-{{ isEditMode ? 'badge' : 'plus' }} me-2"></i>
+            {{ isEditMode ? 'Modifier' : 'Nouveau' }} Collaborateur
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeModal()"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form>
+            <!-- ✅ NOUVEAU : Zone upload avatar -->
+            <div class="mb-3 d-flex align-items-center gap-3">
+              <!-- Prévisualisation -->
+              <div class="avatar-upload-preview">
+                @if (imagePreview) {
+                  <img [src]="imagePreview" class="avatar-upload-img" alt="Aperçu">
+                  <button type="button" class="btn-remove-img" (click)="removeImage()" title="Supprimer">
+                    <i class="bi bi-x"></i>
+                  </button>
+                } @else {
+                  <div class="avatar-upload-placeholder">
+                    <i class="bi bi-person-fill"></i>
+                  </div>
+                }
+              </div>
+              <!-- Bouton choisir -->
+              <div>
+                <input #imgInput type="file" class="d-none"
+                       accept=".jpg,.jpeg,.png,.webp"
+                       (change)="onImageSelected($event)">
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="imgInput.click()">
+                  <i class="bi bi-camera me-1"></i>{{ imagePreview ? 'Changer la photo' : 'Ajouter une photo' }}
+                </button>
+                <div class="text-muted" style="font-size:11px; margin-top:4px;">JPG, PNG, WEBP — max 5 Mo</div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Prénom <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" [(ngModel)]="selectedPrestataire.prenom" name="prenom" placeholder="Ex: Jean" required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" [(ngModel)]="selectedPrestataire.nom" name="nom" placeholder="Ex: Dupont" required>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Email <span class="text-danger">*</span></label>
+              <input type="email" class="form-control" [(ngModel)]="selectedPrestataire.email" name="email" placeholder="jean.dupont@example.com" required>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Téléphone</label>
+                <input type="text" class="form-control" [(ngModel)]="selectedPrestataire.telephone" name="telephone" placeholder="+33 6 12 34 56 78">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">TJM (€) <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" [(ngModel)]="selectedPrestataire.tjm" name="tjm" placeholder="500" min="0" step="0.01" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Type de collaborateur</label>
+              <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded">
+                <div>
+                  @if (selectedPrestataire.responsable) {
+                    <span class="badge-role badge-responsable">
+                      <i class="bi bi-person-badge-fill me-1"></i>Interne — pas de vérification de contrat
+                    </span>
+                  } @else {
+                    <span class="badge-role badge-prestataire">
+                      <i class="bi bi-person-workspace me-1"></i>Prestataire — contrat requis pour la génération
+                    </span>
+                  }
+                </div>
+                <div class="form-check form-switch ms-3 mb-0">
+                  <input class="form-check-input" type="checkbox" id="modalResponsable"
+                         [(ngModel)]="selectedPrestataire.responsable" name="responsable"
+                         style="width: 2.5em; height: 1.3em;">
+                </div>
+              </div>
+            </div>
+
+            <!--   Entreprise / SSII : facultative, alimentée par /api/entreprises -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-building me-1 text-primary"></i>Entreprise / SSII
+                <span class="text-muted fw-normal">(facultatif)</span>
+              </label>
+              <select class="form-select"
+                      [(ngModel)]="selectedPrestataire.entrepriseId"
+                      name="entrepriseId">
+                <option [ngValue]="null">— Aucune entreprise —</option>
+                @for (e of entreprises; track e.id) {
+                  <option [ngValue]="e.id">
+                    {{ e.nom }}@if (e.code) { &nbsp;({{ e.code }}) }
+                  </option>
+                }
+              </select>
+              <small class="text-muted">
+                Le nom de l'entreprise (ou son code) s'affiche entre parenthèses à côté du collaborateur dans les shifts et listes.
+              </small>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light" (click)="closeModal()">Annuler</button>
+          <button type="button" class="btn btn-primary px-4" (click)="savePrestataire()">
+            <i class="bi bi-check-circle me-2"></i>Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL DÉTAILS CONTRAT -->
+@if (showContratModal && selectedContrat) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-file-earmark-text me-2"></i>Détails du Contrat
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeContratModal()"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <!-- Prestataire -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-muted small">COLLABORATEUR</label>
+              <div class="d-flex align-items-center">
+                <div class="avatar-circle me-2">
+                  {{ getInitials(selectedContrat.prestataire?.nom, selectedContrat.prestataire?.prenom) }}
+                </div>
+                <div>
+                  <div class="fw-bold">{{ selectedContrat.prestataire?.prenom }} {{ selectedContrat.prestataire?.nom }}</div>
+                  <div class="small text-muted">{{ selectedContrat.prestataire?.email }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Type Contrat -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-muted small">TYPE DE CONTRAT</label>
+              <div>
+                <span class="badge bg-info text-white">
+                  {{ selectedContrat.typeContrat?.nom || selectedContrat.typeContrat?.libelle || 'N/A' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Date Début -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-muted small">DATE DE DÉBUT</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-0">
+                  <i class="bi bi-calendar-check text-success"></i>
+                </span>
+                <input type="text" class="form-control bg-light border-0" [value]="formatDate(selectedContrat.dateDebut)" readonly>
+              </div>
+            </div>
+
+            <!-- Date Fin -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-muted small">DATE DE FIN</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-0">
+                  <i class="bi bi-calendar-x text-danger"></i>
+                </span>
+                <input type="text" class="form-control bg-light border-0" [value]="formatDate(selectedContrat.dateFin)" readonly>
+              </div>
+            </div>
+
+            <!-- TJM -->
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-muted small">TJM</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-0">
+                  <i class="bi bi-currency-euro text-warning"></i>
+                </span>
+                <input type="text" class="form-control bg-light border-0" [value]="selectedContrat.tjm + '€/jour'" readonly>
+              </div>
+            </div>
+
+            <!-- Nombre de jours -->
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-muted small">NOMBRE DE JOURS</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-0">
+                  <i class="bi bi-calendar3 text-primary"></i>
+                </span>
+                <input type="text" class="form-control bg-light border-0" [value]="selectedContrat.nombreJours + ' jours'" readonly>
+              </div>
+            </div>
+
+            <!-- Jours Restants -->
+            @if (isContratActif(selectedContrat)) {
+              <div class="col-md-4">
+                <label class="form-label fw-semibold text-muted small">JOURS RESTANTS</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-warning-subtle border-0">
+                    <i class="bi bi-clock text-warning"></i>
+                  </span>
+                  <input type="text" class="form-control bg-warning-subtle border-0 fw-bold" [value]="getJoursRestants(selectedContrat) + ' jours'" readonly>
+                </div>
+              </div>
+            }
+
+            <!-- Statut -->
+            <div class="col-12">
+              <label class="form-label fw-semibold text-muted small">STATUT</label>
+              <div>
+                @if (isContratActif(selectedContrat)) {
+                  <span class="badge bg-success-subtle text-success px-3 py-2">
+                    <i class="bi bi-check-circle me-2"></i>Contrat Actif
+                  </span>
+                } @else {
+                  <span class="badge bg-secondary-subtle text-secondary px-3 py-2">
+                    <i class="bi bi-x-circle me-2"></i>Contrat Terminé
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!-- Montant Total (si calculable) -->
+            @if (selectedContrat.tjm && selectedContrat.nombreJours) {
+              <div class="col-12">
+                <div class="alert alert-info mb-0">
+                  <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                      <i class="bi bi-calculator me-2"></i>
+                      <strong>Montant Total Estimé</strong>
+                    </div>
+                    <div class="h4 mb-0 fw-bold">
+                      {{ (selectedContrat.tjm * selectedContrat.nombreJours) | formatMontant }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-secondary" (click)="closeContratModal()">Fermer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL CONFIRMATION SUPPRESSION -->
+@if (showDeleteConfirm) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-danger text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="showDeleteConfirm = false"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="mb-0">
+            Êtes-vous sûr de vouloir supprimer
+            <strong>{{ prestataireToDelete?.prenom }} {{ prestataireToDelete?.nom }}</strong> ?
+          </p>
+          <p class="text-muted mb-0 mt-2">Cette action est irréversible.</p>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-light" (click)="showDeleteConfirm = false">Annuler</button>
+          <button type="button" class="btn btn-danger px-4" (click)="deletePrestataire()">
+            <i class="bi bi-trash me-2"></i>Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================================
+       MODAL CONFIRMATION ACTIVATION / DÉSACTIVATION
+     ======================================================================== -->
+@if (showToggleActiveConfirm && prestataireToToggle) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        @if (prestataireToToggle.isActive === false) {
+          <div class="modal-header bg-success text-white border-0">
+            <h5 class="modal-title fw-bold">
+              <i class="bi bi-check-circle me-2"></i>Réactiver le compte
+            </h5>
+            <button type="button" class="btn-close btn-close-white" (click)="cancelToggleActive()"></button>
+          </div>
+          <div class="modal-body p-4">
+            <p class="mb-2">
+              Voulez-vous réactiver
+              <strong>{{ prestataireToToggle.prenom }} {{ prestataireToToggle.nom }}</strong> ?
+            </p>
+            <p class="text-muted small mb-0">
+              Le collaborateur réapparaîtra dans les shifts, contrats et sélecteurs.
+              S'il a un compte utilisateur, il pourra de nouveau se connecter.
+            </p>
+          </div>
+          <div class="modal-footer border-0 bg-light">
+            <button type="button" class="btn btn-light" (click)="cancelToggleActive()">Annuler</button>
+            <button type="button" class="btn btn-success px-4" (click)="toggleActive()">
+              <i class="bi bi-check-circle me-2"></i>Réactiver
+            </button>
+          </div>
+        } @else {
+          <div class="modal-header bg-warning text-dark border-0">
+            <h5 class="modal-title fw-bold">
+              <i class="bi bi-slash-circle me-2"></i>Désactiver le compte
+            </h5>
+            <button type="button" class="btn-close" (click)="cancelToggleActive()"></button>
+          </div>
+          <div class="modal-body p-4">
+            <p class="mb-2">
+              Voulez-vous désactiver
+              <strong>{{ prestataireToToggle.prenom }} {{ prestataireToToggle.nom }}</strong> ?
+            </p>
+            <ul class="text-muted small mb-3">
+              <li>Plus visible dans les shifts, contrats, sélecteurs et autres modules</li>
+              <li>Toujours visible (grisé) dans cette liste</li>
+              <li>Connexion bloquée si un compte utilisateur est lié</li>
+            </ul>
+
+            <!--   Motif de désactivation (facultatif) — liste prédéfinie -->
+            <label for="toggleReasonOption" class="form-label fw-semibold mb-1">
+              Motif <span class="text-muted fw-normal">(facultatif)</span>
+            </label>
+            <select id="toggleReasonOption"
+                    class="form-select"
+                    [(ngModel)]="toggleReasonOption"
+                    name="toggleReasonOption">
+              <option value="">— Sélectionner un motif —</option>
+              @for (opt of deactivationReasonOptions; track opt) {
+                <option [value]="opt">{{ opt }}</option>
+              }
+            </select>
+
+            <!--   Champ libre uniquement quand "Autre" est choisi -->
+            @if (toggleReasonOption === 'Autre') {
+              <label for="toggleReasonCustom" class="form-label fw-semibold mt-3 mb-1">
+                Précisez <span class="text-muted fw-normal">(facultatif)</span>
+              </label>
+              <textarea id="toggleReasonCustom"
+                        class="form-control"
+                        rows="3"
+                        maxlength="500"
+                        placeholder="Précisez le motif..."
+                        [(ngModel)]="toggleReasonCustom"
+                        name="toggleReasonCustom"></textarea>
+              <div class="d-flex justify-content-end">
+                <small class="text-muted">{{ toggleReasonCustom.length }}/500</small>
+              </div>
+            }
+
+            <small class="text-muted d-block mt-1">Visible au survol du badge « Désactivé ».</small>
+          </div>
+          <div class="modal-footer border-0 bg-light">
+            <button type="button" class="btn btn-light" (click)="cancelToggleActive()">Annuler</button>
+            <button type="button" class="btn btn-warning px-4" (click)="toggleActive()">
+              <i class="bi bi-slash-circle me-2"></i>Désactiver
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================================
+       MODAL COMPTES TECHNIQUES (ADM / ADML / VPN…)
+     ======================================================================== -->
+@if (showCredentialsModal && credentialsPrestataire) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-info text-white border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-key me-2"></i>
+            Comptes &amp; mots de passe — {{ credentialsPrestataire.prenom }} {{ credentialsPrestataire.nom }}
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeCredentialsModal()"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <!-- Bannière sécurité -->
+          <div class="alert alert-warning d-flex align-items-start mb-3 small mb-3" role="alert">
+            <i class="bi bi-shield-lock me-2 fs-5"></i>
+            <div>
+              Les mots de passe sont chiffrés (AES-256-GCM) côté serveur.
+              Pour afficher un mot de passe en clair, vous devrez confirmer votre propre mot de passe.
+            </div>
+          </div>
+
+          <!-- Liste -->
+          @if (credentialsLoading) {
+            <div class="text-center py-4">
+              <div class="spinner-border text-info" role="status">
+                <span class="visually-hidden">Chargement...</span>
+              </div>
+            </div>
+          } @else {
+            @if (credentials.length === 0 && !isCredEditing) {
+              <div class="text-center py-4 text-muted">
+                <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                <p class="mb-3">Aucun compte enregistré.</p>
+                <button class="btn btn-info text-white" (click)="startNewCred()">
+                  <i class="bi bi-plus-circle me-2"></i>Ajouter un compte
+                </button>
+              </div>
+            } @else {
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <small class="text-muted fw-semibold">{{ credentials.length }} compte(s)</small>
+                @if (!isCredEditing) {
+                  <button class="btn btn-sm btn-outline-info" (click)="startNewCred()">
+                    <i class="bi bi-plus-lg me-1"></i>Nouveau compte
+                  </button>
+                }
+              </div>
+
+              <div class="list-group mb-3">
+                @for (c of credentials; track c.id) {
+                  <div class="list-group-item d-flex align-items-center gap-3"
+                       [class.list-group-item-danger]="isCredExpired(c)"
+                       [class.list-group-item-warning]="isCredExpiringSoon(c) && !isCredExpired(c)">
+                    <span class="badge bg-info-subtle text-info px-2 py-2 fw-semibold" style="min-width: 70px;">
+                      {{ c.label }}
+                    </span>
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold" style="font-family: 'Consolas','Monaco',monospace; font-size: 13px;">
+                        {{ c.accountName }}
+                      </div>
+                      <div class="d-flex gap-2 align-items-center small text-muted mt-1 flex-wrap">
+                        <span><i class="bi bi-dot"></i>Mot de passe&nbsp;:&nbsp;<code class="text-secondary">••••••••</code></span>
+                        @if (c.expiresAt) {
+                          <span>
+                            <i class="bi bi-calendar-x me-1"></i>
+                            Expire le {{ c.expiresAt | date:'dd/MM/yyyy' }}
+                            @if (isCredExpired(c)) { <span class="badge bg-danger ms-1">Expiré</span> }
+                            @else if (isCredExpiringSoon(c)) { <span class="badge bg-warning text-dark ms-1">Bientôt</span> }
+                          </span>
+                        }
+                        @if (c.note) { <span><i class="bi bi-sticky me-1"></i>{{ c.note }}</span> }
+                      </div>
+                    </div>
+                    <div class="btn-group">
+                      <button class="btn btn-sm btn-outline-info" (click)="askReveal(c)" title="Afficher le mot de passe">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-secondary" (click)="startEditCred(c)" title="Modifier">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger" (click)="confirmDeleteCred(c)" title="Supprimer">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          }
+
+          <!-- Formulaire ajout / édition -->
+          @if (isCredEditing) {
+            <div class="card border-info">
+              <div class="card-header bg-info-subtle text-info fw-semibold d-flex align-items-center justify-content-between">
+                <span>
+                  <i class="bi" [class.bi-pencil-square]="credIsEditMode" [class.bi-plus-circle]="!credIsEditMode"></i>
+                  {{ credIsEditMode ? 'Modifier le compte' : 'Nouveau compte' }}
+                </span>
+                <button class="btn-close btn-sm" (click)="cancelCredEdit()"></button>
+              </div>
+              <div class="card-body">
+                <div class="row g-2">
+                  <div class="col-md-4">
+                    <label class="form-label small fw-semibold mb-1">Type <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" [(ngModel)]="credForm.label" name="credLabel"
+                           list="credLabelSuggestions" placeholder="ADM, VPN…">
+                    <datalist id="credLabelSuggestions">
+                      @for (s of LABEL_SUGGESTIONS; track s) { <option [value]="s"></option> }
+                    </datalist>
+                  </div>
+                  <div class="col-md-8">
+                    <label class="form-label small fw-semibold mb-1">Identifiant / login <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" [(ngModel)]="credForm.accountName" name="credAccount"
+                           style="font-family: 'Consolas','Monaco',monospace;" placeholder="ex: jdupont-adm">
+                  </div>
+                  <div class="col-md-8">
+                    <label class="form-label small fw-semibold mb-1">
+                      Mot de passe
+                      @if (!credIsEditMode) { <span class="text-danger">*</span> }
+                      @else { <span class="text-muted fw-normal">(laisser vide pour ne pas changer)</span> }
+                    </label>
+                    <input type="text" class="form-control" [(ngModel)]="credForm.password" name="credPassword"
+                           autocomplete="new-password"
+                           [placeholder]="credIsEditMode ? 'Ne pas changer' : 'Mot de passe'">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-semibold mb-1">Expire le</label>
+                    <input type="date" class="form-control" [(ngModel)]="credForm.expiresAt" name="credExpires">
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small fw-semibold mb-1">Note <span class="text-muted fw-normal">(facultative)</span></label>
+                    <input type="text" class="form-control" [(ngModel)]="credForm.note" name="credNote"
+                           maxlength="500" placeholder="URL d'accès, contexte…">
+                  </div>
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                  <button class="btn btn-light" (click)="cancelCredEdit()">Annuler</button>
+                  <button class="btn btn-info text-white" (click)="saveCred()">
+                    <i class="bi bi-check-circle me-2"></i>{{ credIsEditMode ? 'Enregistrer' : 'Ajouter' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="modal-footer border-0 bg-light">
+          <button type="button" class="btn btn-secondary" (click)="closeCredentialsModal()">Fermer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================================
+       MODAL REVEAL — Confirmation mdp utilisateur + affichage en clair
+     ======================================================================== -->
+@if (showRevealModal && revealingCredential) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.6); z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-warning text-dark border-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-shield-lock me-2"></i>Confirmation de votre identité
+          </h5>
+          <button type="button" class="btn-close" (click)="closeRevealModal()"></button>
+        </div>
+        <div class="modal-body p-4">
+          @if (!revealedPassword) {
+            <p class="mb-2">
+              Pour afficher le mot de passe du compte
+              <strong>{{ revealingCredential.label }} — {{ revealingCredential.accountName }}</strong>,
+              veuillez saisir <strong>votre mot de passe de connexion</strong>.
+            </p>
+            <label class="form-label fw-semibold small mb-1">Votre mot de passe</label>
+            <input type="password" class="form-control"
+                   [(ngModel)]="revealUserPassword" name="revealUserPassword"
+                   autocomplete="current-password"
+                   (keyup.enter)="confirmReveal()"
+                   placeholder="••••••••">
+            @if (revealError) {
+              <div class="alert alert-danger mt-3 mb-0 py-2 small">
+                <i class="bi bi-exclamation-triangle me-1"></i>{{ revealError }}
+              </div>
+            }
+          } @else {
+            <div class="alert alert-success mb-2">
+              <i class="bi bi-check-circle me-2"></i>Mot de passe révélé.
+              Il sera masqué automatiquement dans 30 secondes.
+            </div>
+            <label class="form-label fw-semibold small mb-1">Mot de passe</label>
+            <div class="input-group">
+              <input type="text" readonly class="form-control"
+                     style="font-family: 'Consolas','Monaco',monospace; font-size: 14px;"
+                     [value]="revealedPassword">
+              <button class="btn btn-outline-primary" (click)="copyRevealedPassword()" title="Copier">
+                <i class="bi bi-clipboard"></i>
+              </button>
+            </div>
+          }
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          @if (!revealedPassword) {
+            <button class="btn btn-light" (click)="closeRevealModal()">Annuler</button>
+            <button class="btn btn-warning" [disabled]="revealLoading || !revealUserPassword" (click)="confirmReveal()">
+              @if (revealLoading) {
+                <span class="spinner-border spinner-border-sm me-2"></span>Vérification…
+              } @else {
+                <i class="bi bi-eye me-2"></i>Afficher
+              }
+            </button>
+          } @else {
+            <button class="btn btn-secondary" (click)="closeRevealModal()">Fermer</button>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================================
+       MODAL SUPPRESSION COMPTE TECHNIQUE
+     ======================================================================== -->
+@if (showDeleteCredConfirm && credToDelete) {
+  <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-danger text-white border-0">
+          <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>Supprimer ce compte ?</h5>
+          <button type="button" class="btn-close btn-close-white" (click)="cancelDeleteCred()"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="mb-0">
+            Supprimer le compte
+            <strong>{{ credToDelete.label }} — {{ credToDelete.accountName }}</strong> ?
+          </p>
+          <p class="text-muted small mb-0 mt-2">Cette action est irréversible.</p>
+        </div>
+        <div class="modal-footer border-0 bg-light">
+          <button class="btn btn-light" (click)="cancelDeleteCred()">Annuler</button>
+          <button class="btn btn-danger" (click)="doDeleteCred()"><i class="bi bi-trash me-1"></i>Supprimer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================================================
+     ✅ MODAL HISTORIQUE CONTRATS
+     ======================================================================== -->
+@if (showHistoriqueModal && historiquePrestataire) {
+  <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+
+        <!-- Header -->
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">
+            <i class="bi bi-clock-history me-2"></i>
+            Historique - {{ historiquePrestataire.prenom }} {{ historiquePrestataire.nom }}
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeHistoriqueModal()"></button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body">
+
+          <!-- Stats -->
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <div class="p-3 bg-primary-subtle rounded">
+                <h3 class="mb-0">{{ getTotalContratsCount(historiquePrestataire.id) }}</h3>
+                <small class="text-muted">Total contrats</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 bg-success-subtle rounded">
+                <h3 class="mb-0">{{ getActiveContratsCount(historiquePrestataire.id) }}</h3>
+                <small class="text-muted">Actifs</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="p-3 bg-secondary-subtle rounded">
+                <h3 class="mb-0">{{ getExpiredContratsCount(historiquePrestataire.id) }}</h3>
+                <small class="text-muted">Expirés</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filtres -->
+          <div class="btn-group mb-3" role="group">
+            <button type="button"
+                    class="btn btn-sm"
+                    [class.btn-primary]="filtreHistorique === 'tous'"
+                    [class.btn-outline-primary]="filtreHistorique !== 'tous'"
+                    (click)="filtreHistorique = 'tous'">
+              Tous ({{ getTotalContratsCount(historiquePrestataire.id) }})
+            </button>
+
+            <button type="button"
+                    class="btn btn-sm"
+                    [class.btn-success]="filtreHistorique === 'actifs'"
+                    [class.btn-outline-success]="filtreHistorique !== 'actifs'"
+                    (click)="filtreHistorique = 'actifs'">
+              Actifs ({{ getActiveContratsCount(historiquePrestataire.id) }})
+            </button>
+
+            <button type="button"
+                    class="btn btn-sm"
+                    [class.btn-secondary]="filtreHistorique === 'expires'"
+                    [class.btn-outline-secondary]="filtreHistorique !== 'expires'"
+                    (click)="filtreHistorique = 'expires'">
+              Expirés ({{ getExpiredContratsCount(historiquePrestataire.id) }})
+            </button>
+          </div>
+
+          <!-- Liste contrats -->
+          @if (getContratsHistorique().length === 0) {
+            <div class="alert alert-info">Aucun contrat à afficher.</div>
+          } @else {
+            @for (contrat of getContratsHistorique(); track contrat.id) {
+              <div class="card mb-2">
+                <div class="card-body">
+                  <div class="row align-items-center">
+                    <div class="col-md-4">
+                      <h6>{{ contrat.typeContrat?.nom || 'N/A' }}</h6>
+                      <span class="badge"
+                            [ngClass]="getContratStatutClass(contrat)">
+                        {{ getContratStatut(contrat) }}
+                      </span>
+                    </div>
+
+                    <div class="col-md-4">
+                      <small>{{ formatDate(contrat.dateDebut) }} → {{ formatDate(contrat.dateFin) }}</small>
+                    </div>
+
+                    <div class="col-md-4">
+                      <div class="progress">
+                        <div class="progress-bar"
+                             [style.width.%]="getContratProgress(contrat)">
+                        </div>
+                      </div>
+                      <small>
+                        {{ contrat.joursUtilises || 0 }} / {{ contrat.nombreJours || 0 }}
+                        jours ({{ getContratProgress(contrat) }}%)
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeHistoriqueModal()">Fermer</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+}

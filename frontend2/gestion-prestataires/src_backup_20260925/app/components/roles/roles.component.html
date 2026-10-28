@@ -1,0 +1,359 @@
+<div class="roles-container">
+  <!-- Header avec titre et actions -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <h1 class="page-title">
+          <i class="bi bi-shield-fill-check"></i>
+          Gestion des Rôles
+        </h1>
+        <p class="page-subtitle">Gérez les rôles et leurs permissions</p>
+      </div>
+      <div class="header-actions">
+       <!--  <button class="btn btn-outline-primary" (click)="exportToCSV()" title="Exporter en CSV">
+          <i class="bi bi-download"></i>
+          <span class="btn-text">Exporter</span>
+        </button> -->
+        <button class="btn btn-outline-secondary" (click)="toggleViewMode()" title="Changer la vue">
+          <i class="bi" [class.bi-grid-3x3-gap]="viewMode === 'list'" [class.bi-list-ul]="viewMode === 'grid'"></i>
+        </button>
+        <button class="btn btn-primary" (click)="openModal()">
+          <i class="bi bi-plus-lg"></i>
+          <span class="btn-text">Nouveau Rôle</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages d'alerte -->
+  @if (successMessage) {
+    <div class="alert alert-success alert-dismissible fade show">
+      <i class="bi bi-check-circle-fill me-2"></i>
+      {{ successMessage }}
+      <button type="button" class="btn-close" (click)="successMessage = ''"></button>
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="alert alert-danger alert-dismissible fade show">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      {{ errorMessage }}
+      <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+    </div>
+  }
+
+  <!-- Statistiques -->
+  <div class="stats-row">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">
+        <i class="bi bi-shield-check"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ totalRoles }}</div>
+        <div class="stat-label">Rôles Totaux</div>
+      </div>
+    </div>
+    <div class="stat-card stat-success">
+      <div class="stat-icon">
+        <i class="bi bi-toggle-on"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ activeRoles }}</div>
+        <div class="stat-label">Rôles Actifs</div>
+      </div>
+    </div>
+    <!-- <div class="stat-card stat-info">
+      <div class="stat-icon">
+        <i class="bi bi-people"></i>
+      </div>
+       <div class="stat-content">
+        <div class="stat-value">{{ totalUsers }}</div>
+        <div class="stat-label">Utilisateurs</div>
+      </div> 
+    </div> -->
+  </div>
+
+  <!-- Filtres et recherche -->
+  <div class="filters-card">
+    <div class="filters-header">
+      <h5 class="filters-title">
+        <i class="bi bi-funnel"></i>
+        Recherche
+      </h5>
+      <button class="btn btn-sm btn-link" (click)="resetFilters()">
+        <i class="bi bi-arrow-counterclockwise"></i>
+        Réinitialiser
+      </button>
+    </div>
+    <div class="filters-body">
+      <div class="row g-3">
+        <div class="col-md-10">
+          <div class="search-box">
+            <i class="bi bi-search search-icon"></i>
+            <input 
+              type="text" 
+              class="form-control" 
+              [(ngModel)]="searchTerm" 
+              placeholder="Rechercher par nom ou description..."
+            >
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="results-count">
+            <span class="badge bg-primary">{{ filteredRoles.length }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenu principal -->
+  @if (isLoading) {
+    <div class="loading-container">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="loading-text">Chargement des rôles...</p>
+    </div>
+  } @else {
+    <!-- Vue grille -->
+    @if (viewMode === 'grid') {
+      <div class="roles-grid">
+        @for (role of filteredRoles; track role.id) {
+          <div class="role-card" [class]="'role-card-' + getRoleColor(role.name)">
+            <div class="role-card-header">
+              <div class="role-icon">
+                <i class="bi" [class]="getRoleIcon(role.name)"></i>
+              </div>
+              <div class="role-actions">
+                <button class="btn-icon btn-edit" (click)="openModal(role)" title="Modifier">
+                  <i class="bi bi-pencil-fill"></i>
+                </button>
+                <button class="btn-icon btn-delete" (click)="deleteRole(role.id!, role.name)" title="Supprimer">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </div>
+            </div>
+            <div class="role-card-body">
+              <h3 class="role-name">{{ role.name }}</h3>
+              <p class="role-description">{{ role.description }}</p>
+             <!--  <div class="role-stats">
+                <div class="role-stat">
+                  <i class="bi bi-people"></i>
+                  <span>{{ role.userCount || 0 }} utilisateurs</span>
+                </div>
+              </div> -->
+            </div>
+            <div class="role-card-footer">
+              @if (role.isActive !== false) {
+                <span class="status-badge status-active">
+                  <i class="bi bi-check-circle-fill"></i>
+                  Actif
+                </span>
+              } @else {
+                <span class="status-badge status-inactive">
+                  <i class="bi bi-x-circle-fill"></i>
+                  Inactif
+                </span>
+              }
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-state-grid">
+            <div class="empty-content">
+              <i class="bi bi-inbox"></i>
+              <p class="empty-title">Aucun rôle trouvé</p>
+              <p class="empty-text">Commencez par créer un nouveau rôle</p>
+              <button class="btn btn-primary" (click)="openModal()">
+                <i class="bi bi-plus-lg"></i>
+                Créer un rôle
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Vue liste -->
+    @if (viewMode === 'list') {
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="table roles-table">
+            <thead>
+              <tr>
+                <th>
+                  <div class="th-content">
+                    <i class="bi bi-shield"></i>
+                    Rôle
+                  </div>
+                </th>
+                <th>
+                  <div class="th-content">
+                    <i class="bi bi-card-text"></i>
+                    Description
+                  </div>
+                </th>
+                <th>
+                  <div class="th-content">
+                    <i class="bi bi-people"></i>
+                    Utilisateurs
+                  </div>
+                </th>
+                <th>
+                  <div class="th-content">
+                    <i class="bi bi-toggle-on"></i>
+                    Statut
+                  </div>
+                </th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (role of filteredRoles; track role.id) {
+                <tr class="role-row">
+                  <td>
+                    <div class="role-info">
+                      <div class="role-icon-small" [class]="'bg-' + getRoleColor(role.name)">
+                        <i class="bi" [class]="getRoleIcon(role.name)"></i>
+                      </div>
+                      <span class="role-name-text">{{ role.name }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="role-description-text">{{ role.description }}</span>
+                  </td>
+                  <td>
+                    <span class="user-count">
+                      <i class="bi bi-people-fill"></i>
+                      {{ role.userCount || 0 }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (role.isActive !== false) {
+                      <span class="status-badge status-active">
+                        <i class="bi bi-check-circle-fill"></i>
+                        Actif
+                      </span>
+                    } @else {
+                      <span class="status-badge status-inactive">
+                        <i class="bi bi-x-circle-fill"></i>
+                        Inactif
+                      </span>
+                    }
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn-action btn-edit" (click)="openModal(role)" title="Modifier">
+                        <i class="bi bi-pencil-fill"></i>
+                      </button>
+                      <button class="btn-action btn-delete" (click)="deleteRole(role.id!, role.name)" title="Supprimer">
+                        <i class="bi bi-trash-fill"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="empty-state">
+                    <div class="empty-content">
+                      <i class="bi bi-inbox"></i>
+                      <p class="empty-title">Aucun rôle trouvé</p>
+                      <p class="empty-text">Commencez par créer un nouveau rôle</p>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+</div>
+
+<!-- Modal de création/édition -->
+@if (isModalOpen) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <i class="bi bi-shield-check"></i>
+          {{ isEditMode ? 'Modifier le rôle' : 'Nouveau rôle' }}
+        </h2>
+        <button class="btn-close-modal" (click)="closeModal()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        @if (errorMessage) {
+          <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {{ errorMessage }}
+          </div>
+        }
+
+        <form>
+          <div class="form-group">
+            <label class="form-label">
+              <i class="bi bi-shield"></i>
+              Nom du rôle
+              <span class="required">*</span>
+            </label>
+            <input 
+              type="text" 
+              class="form-control" 
+              [(ngModel)]="selectedRole.name" 
+              name="name" 
+              placeholder="Ex: Administrateur, Gestionnaire, etc."
+              required
+            >
+            <small class="form-text">Lettres, chiffres, espaces, tirets et underscores uniquement</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <i class="bi bi-card-text"></i>
+              Description
+              <span class="required">*</span>
+            </label>
+            <textarea 
+              class="form-control" 
+              [(ngModel)]="selectedRole.description" 
+              name="description"
+              rows="4"
+              placeholder="Décrivez les responsabilités et permissions de ce rôle..."
+              required
+            ></textarea>
+            <small class="form-text">Minimum 10 caractères</small>
+          </div>
+
+          <div class="form-group">
+            <div class="form-check-custom">
+              <input 
+                class="form-check-input" 
+                type="checkbox" 
+                [(ngModel)]="selectedRole.isActive" 
+                name="isActive" 
+                id="isActive"
+              >
+              <label class="form-check-label" for="isActive">
+                <!-- <i class="bi bi-toggle-on"></i> -->
+                Rôle actif
+              </label>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()">
+          <i class="bi bi-x-circle"></i>
+          Annuler
+        </button>
+        <button class="btn btn-primary" (click)="saveRole()">
+          <i class="bi bi-check-circle"></i>
+          {{ isEditMode ? 'Mettre à jour' : 'Créer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

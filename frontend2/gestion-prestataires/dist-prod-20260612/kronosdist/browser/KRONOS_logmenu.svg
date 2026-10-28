@@ -1,0 +1,21 @@
+<svg width="400" height="100" viewBox="0 0 400 100" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="100" fill="#2B3A8B"/>
+  <g transform="translate(20,20)">
+    <!-- Stylized K -->
+    <g>
+      <path d="M0 0 H20 V60 H0 Z" fill="#A259FF"/>
+      <path d="M20 30 L50 0 L50 20 L30 40 L50 60 L50 80 L20 50 Z" fill="url(#gradK)"/>
+      <defs>
+        <linearGradient id="gradK" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#6EE7B7"/>
+          <stop offset="100%" stop-color="#3B82F6"/>
+        </linearGradient>
+      </defs>
+    </g>
+
+    <!-- KRONOS Text -->
+    <text x="70" y="45" font-family="Georgia, serif" font-size="40" fill="white" letter-spacing="4">
+      RONOS
+    </text>
+  </g>
+</svg>

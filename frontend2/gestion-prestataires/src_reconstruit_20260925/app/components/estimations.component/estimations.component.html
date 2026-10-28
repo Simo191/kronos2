@@ -1,0 +1,253 @@
+<div class="container-fluid px-4 py-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h1 class="h3 fw-bold mb-1">
+          <i class="bi bi-calculator-fill me-2 text-primary"></i>Estimations Budgétaires
+        </h1>
+        <p class="text-muted mb-0">Gérez vos estimations annuelles</p>
+      </div>
+      <div class="d-flex gap-2">
+        <div class="btn-group" role="group">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            [class.active]="viewMode === 'list'"
+            (click)="toggleViewMode('list')">
+            <i class="bi bi-list-ul"></i> Liste
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            [class.active]="viewMode === 'cards'"
+            (click)="toggleViewMode('cards')">
+            <i class="bi bi-grid-3x3-gap-fill"></i> Cartes
+          </button>
+        </div>
+        <button class="btn btn-primary px-4" (click)="navigateToDetail()">
+          <i class="bi bi-plus-lg me-2"></i>Nouvelle Estimation
+        </button>
+      </div>
+    </div>
+  
+    <!-- NOTIFICATIONS -->
+    @if (notification.show) {
+      <div class="alert alert-dismissible fade show mb-4" 
+           style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+           [class.alert-success]="notification.type === 'success'"
+           [class.alert-danger]="notification.type === 'error'"
+           [class.alert-warning]="notification.type === 'warning'">
+        <i class="bi me-2" 
+           [class.bi-check-circle-fill]="notification.type === 'success'"
+           [class.bi-exclamation-triangle-fill]="notification.type === 'error' || notification.type === 'warning'"></i>
+        {{ notification.message }}
+        <button type="button" class="btn-close" (click)="notification.show = false"></button>
+      </div>
+    }
+  
+    <!-- Filtres -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-3">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="input-group">
+              <span class="input-group-text bg-white border-end-0">
+                <i class="bi bi-search text-muted"></i>
+              </span>
+              <input 
+                type="text" 
+                class="form-control border-start-0 ps-0" 
+                placeholder="Rechercher par année ou créateur..."
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="applyFilters()">
+            </div>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" [(ngModel)]="filterAnnee" (ngModelChange)="applyFilters()">
+              <option value="">Toutes les années</option>
+              @for (annee of anneesUniques; track annee) {
+                <option [value]="annee">{{ annee }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Loader -->
+    @if (isLoading) {
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Chargement...</span>
+        </div>
+      </div>
+    } @else {
+      @if (viewMode === 'list') {
+        <!-- VUE LISTE -->
+        <div class="card border-0 shadow-sm">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="px-4 py-3">Année</th>
+                  <th class="px-4 py-3">Budget Cagnotte</th>
+                  <th class="px-4 py-3">Budget Consommé</th>
+                  <th class="px-4 py-3">Budget Restant</th>
+                  <th class="px-4 py-3">Total Estimé</th>
+                  <th class="px-4 py-3">Créé par</th>
+                  <th class="px-4 py-3">Date</th>
+                  <th class="px-4 py-3 text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (estimation of filteredEstimations; track estimation.id) {
+                  <tr>
+                    <td class="px-4 py-3">
+                      <span class="badge bg-primary fs-6">{{ estimation.annee }}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class="fw-semibold">{{ estimation.budgetCagnotte | formatMontant }}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class="text-danger">{{ estimation.budgetConsomme | formatMontant }}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class="fw-bold" [class.text-success]="getBudgetRestant(estimation) > 0" [class.text-danger]="getBudgetRestant(estimation) < 0">
+                        {{ getBudgetRestant(estimation) | formatMontant }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class="fw-bold text-info">{{ getTotalRevenu(estimation) | formatMontant }}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <small>{{ estimation.createurNom || '-' }}</small>
+                    </td>
+                    <td class="px-4 py-3">
+                      <small class="text-muted">{{ formatDate(estimation.dateCreation) }}</small>
+                    </td>
+                    <td class="px-4 py-3 text-end">
+                      <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-info" (click)="navigateToResultat(estimation.id!)" title="Voir résultat">
+                          <i class="bi bi-table"></i>
+                        </button>
+                        <button class="btn btn-outline-primary" (click)="navigateToDetail(estimation.id)" title="Éditer">
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" (click)="confirmDelete(estimation)" title="Supprimer">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="8" class="text-center py-5">
+                      <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                      <p class="text-muted">Aucune estimation trouvée</p>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      } @else {
+        <!-- VUE CARTES -->
+        <div class="row g-3">
+          @for (estimation of filteredEstimations; track estimation.id) {
+            <div class="col-md-6 col-lg-4">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                      <h2 class="h4 mb-1">{{ estimation.annee }}</h2>
+                      <small class="text-muted">{{ estimation.lignes.length }} ligne(s)</small>
+                    </div>
+                    <span class="badge" 
+                          [class.bg-success]="getPourcentageUtilise(estimation) < 70"
+                          [class.bg-warning]="getPourcentageUtilise(estimation) >= 70 && getPourcentageUtilise(estimation) < 90"
+                          [class.bg-danger]="getPourcentageUtilise(estimation) >= 90">
+                      {{ getPourcentageUtilise(estimation) | number:'1.0-0' }}%
+                    </span>
+                  </div>
+  
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-2">
+                      <span class="text-muted">Budget Cagnotte</span>
+                      <strong>{{ estimation.budgetCagnotte | formatMontant }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-2">
+                      <span class="text-muted">Budget Consommé</span>
+                      <strong class="text-danger">{{ estimation.budgetConsomme | formatMontant }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small mb-2">
+                      <span class="text-muted">Budget Restant</span>
+                      <strong [class.text-success]="getBudgetRestant(estimation) > 0" [class.text-danger]="getBudgetRestant(estimation) < 0">
+                        {{ getBudgetRestant(estimation) | formatMontant }}
+                      </strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                      <span class="text-muted">Total Estimé</span>
+                      <strong class="text-info fs-5">{{ getTotalRevenu(estimation) | formatMontant }}</strong>
+                    </div>
+                  </div>
+  
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-info flex-fill" (click)="navigateToResultat(estimation.id!)">
+                      <i class="bi bi-table me-1"></i>Résultat
+                    </button>
+                    <button class="btn btn-sm btn-primary flex-fill" (click)="navigateToDetail(estimation.id)">
+                      <i class="bi bi-pencil me-1"></i>Éditer
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="confirmDelete(estimation)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+  
+                  <div class="mt-3 pt-3 border-top">
+                    <small class="text-muted">
+                      Créé par {{ estimation.createurNom || '-' }} le {{ formatDate(estimation.dateCreation) }}
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          } @empty {
+            <div class="col-12">
+              <div class="text-center py-5">
+                <i class="bi bi-inbox display-4 text-muted d-block mb-3"></i>
+                <p class="text-muted">Aucune estimation enregistrée</p>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+  
+  <!-- MODAL CONFIRMATION SUPPRESSION -->
+  @if (showDeleteConfirm && estimationToDelete) {
+    <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060;">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header bg-danger text-white border-0">
+            <h5 class="modal-title fw-bold">
+              <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+            </h5>
+            <button type="button" class="btn-close btn-close-white" (click)="cancelDelete()"></button>
+          </div>
+          <div class="modal-body p-4">
+            <p class="mb-0">Êtes-vous sûr de vouloir supprimer l'estimation pour l'année <strong>{{ estimationToDelete.annee }}</strong> ?</p>
+            <p class="text-muted mb-0 mt-2">Cette action supprimera également toutes les lignes associées.</p>
+          </div>
+          <div class="modal-footer border-0 bg-light">
+            <button type="button" class="btn btn-light" (click)="cancelDelete()">Annuler</button>
+            <button type="button" class="btn btn-danger px-4" (click)="deleteEstimation()">
+              <i class="bi bi-trash me-2"></i>Supprimer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }

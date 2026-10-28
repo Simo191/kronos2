@@ -1,0 +1,268 @@
+.dashboard-wrapper {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+}
+
+// Cartes statistiques
+.stat-card {
+  transition: all 0.3s ease;
+  border-radius: 16px;
+  background: white;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12) !important;
+  }
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+// Card
+.card {
+  border-radius: 16px;
+  border: none;
+}
+
+// Table année
+.year-table {
+  font-size: 0.875rem;
+  
+  thead {
+    .year-header {
+      background: linear-gradient(135deg, #1e88e5, #1565c0);
+      color: white;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      font-size: 0.875rem;
+      padding: 0.75rem;
+    }
+
+    .year-header-n1 {
+      background: linear-gradient(135deg, #28c76f, #1e8449);
+      color: white;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      font-size: 0.875rem;
+      padding: 0.75rem;
+    }
+    
+    th {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #757575;
+      border-color: #e0e0e0;
+    }
+  }
+  
+  tbody {
+    tr {
+      transition: background-color 0.2s ease;
+      
+      &:hover {
+        background-color: #f8f9fa;
+      }
+    }
+    
+    td {
+      border-color: #f0f0f0;
+      font-size: 0.8125rem;
+    }
+  }
+}
+
+// Sticky column
+.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
+// Cellules mois
+.month-cell {
+  min-width: 80px;
+  
+  &.has-days {
+    background-color: #f0f8ff;
+  }
+  
+  &.no-days {
+    background-color: #fafafa;
+  }
+}
+
+.month-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.days-badge {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.month-amount {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #424242;
+  background-color: #e3f2fd;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+// Total général card
+.total-general-card {
+  background: linear-gradient(135deg, #1e88e5, #1565c0);
+  border-radius: 12px;
+  color: white;
+  padding: 1.25rem 1.5rem;
+  margin: 1rem 1.5rem;
+  
+  .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.9;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  
+  h4 {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+}
+
+.total-general-card-success {
+  background: linear-gradient(135deg, #28c76f, #1e8449);
+}
+
+// Form select
+.form-select-sm {
+  font-size: 0.875rem;
+  padding: 0.375rem 2rem 0.375rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  
+  &:focus {
+    border-color: #1e88e5;
+    box-shadow: 0 0 0 0.15rem rgba(30, 136, 229, 0.15);
+  }
+}
+
+// Badges
+.badge {
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+}
+
+// Pagination
+.pagination {
+  gap: 0.25rem;
+  
+  .page-link {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    color: #424242;
+    padding: 0.375rem 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background-color: #f5f5f5;
+      border-color: #d0d0d0;
+    }
+    
+    &:focus {
+      box-shadow: none;
+    }
+  }
+  
+  .page-item.active .page-link {
+    background-color: #1e88e5;
+    border-color: #1e88e5;
+    color: white;
+  }
+  
+  .page-item.disabled .page-link {
+    background-color: #fafafa;
+    border-color: #e0e0e0;
+    color: #bdbdbd;
+  }
+}
+
+// Table primary/success headers
+.table-primary {
+  --bs-table-bg: #e3f2fd;
+  --bs-table-border-color: #bbdefb;
+}
+
+.table-success {
+  --bs-table-bg: #e8f5e9;
+  --bs-table-border-color: #c8e6c9;
+}
+
+// Colors
+.bg-primary-subtle {
+  background-color: rgba(30, 136, 229, 0.1) !important;
+}
+
+.bg-success-subtle {
+  background-color: rgba(40, 199, 111, 0.1) !important;
+}
+
+.bg-warning-subtle {
+  background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.text-primary {
+  color: #1e88e5 !important;
+}
+
+.text-success {
+  color: #28c76f !important;
+}
+
+.text-warning {
+  color: #ffc107 !important;
+}
+
+// Spinner
+.spinner-border {
+  width: 2rem;
+  height: 2rem;
+}
+
+// Responsive
+@media (max-width: 992px) {
+  .year-table {
+    font-size: 0.75rem;
+    
+    .days-badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+    }
+    
+    .month-amount {
+      font-size: 0.65rem;
+    }
+  }
+  
+  .sticky-col {
+    min-width: 120px;
+  }
+}

@@ -1,0 +1,251 @@
+<!-- NOTIFICATIONS TOAST -->
+<div class="notifications-container">
+  @for (notification of notifications; track notification.id) {
+    <div class="notification-toast" 
+         [class.notification-success]="notification.type === 'success'"
+         [class.notification-error]="notification.type === 'error'"
+         [class.notification-warning]="notification.type === 'warning'"
+         [class.notification-info]="notification.type === 'info'">
+      <div class="notification-content">
+        <div class="notification-icon">
+          @if (notification.type === 'success') {
+            <i class="bi bi-check-circle-fill"></i>
+          }
+          @if (notification.type === 'error') {
+            <i class="bi bi-x-circle-fill"></i>
+          }
+          @if (notification.type === 'warning') {
+            <i class="bi bi-exclamation-triangle-fill"></i>
+          }
+          @if (notification.type === 'info') {
+            <i class="bi bi-info-circle-fill"></i>
+          }
+        </div>
+        <div class="notification-message">{{ notification.message }}</div>
+      </div>
+      <button class="notification-close" (click)="removeNotification(notification.id)">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+  }
+</div>
+
+<div class="profil-container">
+  <div class="profil-header">
+    <h1 class="page-title">
+      <i class="bi bi-person-circle"></i>
+      Mon Profil
+    </h1>
+    <p class="page-subtitle">Gérez vos informations personnelles</p>
+  </div>
+
+  @if (currentUser) {
+    <div class="profil-content">
+      <!-- Card Avatar et Info -->
+      <div class="profil-card avatar-card">
+        <div class="avatar-large">
+          @if (prestataire && getAvatarUrl(prestataire.imageUrl)) {
+            <img [src]="getAvatarUrl(prestataire.imageUrl)!"
+                 class="avatar-img" style="background-color: white !important;"
+                 [alt]="getInitials()"
+                 (error)="prestataire.imageUrl = undefined">
+          } @else {
+            {{ getInitials() }}
+          }
+        </div>
+        <h2 class="user-name">{{ currentUser.firstName }} {{ currentUser.lastName }}</h2>
+        <p class="user-email">{{ currentUser.email }}</p>
+        <span class="role-badge">{{ getRoleName() }}</span>
+      </div>
+
+      <!-- Card Informations -->
+      <div class="profil-card info-card">
+        <div class="card-header">
+          <h3>
+            <i class="bi bi-info-circle"></i>
+            Informations Personnelles
+          </h3>
+          @if (!editMode) {
+            <button *hasPermission="Permission.MANAGE_USERS" class="btn btn-outline-primary" (click)="enableEditMode()">
+              <i class="bi bi-pencil"></i>
+              Modifier
+            </button>
+          }
+        </div>
+
+        @if (successMessage) {
+          <div class="alert alert-success">
+            {{ successMessage }}
+          </div>
+        }
+
+        @if (errorMessage) {
+          <div class="alert alert-danger">
+            {{ errorMessage }}
+          </div>
+        }
+
+        <div class="info-grid">
+          <div class="info-item">
+            <label class="info-label">Prénom</label>
+            @if (editMode) {
+              <input 
+                type="text" 
+                class="form-control" 
+                [(ngModel)]="firstName"
+                placeholder="Prénom">
+            } @else {
+              <div class="info-value">{{ currentUser.firstName }}</div>
+            }
+          </div>
+
+          <div class="info-item">
+            <label class="info-label">Nom</label>
+            @if (editMode) {
+              <input 
+                type="text" 
+                class="form-control" 
+                [(ngModel)]="lastName"
+                placeholder="Nom">
+            } @else {
+              <div class="info-value">{{ currentUser.lastName }}</div>
+            }
+          </div>
+
+          <div class="info-item full-width">
+            <label class="info-label">
+              Email
+              <span class="text-muted ms-2">
+                <i class="bi bi-lock-fill"></i>
+                Non modifiable
+              </span>
+            </label>
+            <div class="info-value-readonly">{{ currentUser.email }}</div>
+          </div>
+        </div>
+
+        @if (editMode) {
+          <div class="card-actions">
+            <button class="btn btn-secondary" (click)="cancelEdit()">
+              <i class="bi bi-x-circle"></i>
+              Annuler
+            </button>
+            <button class="btn btn-primary" (click)="saveProfile()">
+              <i class="bi bi-check-circle"></i>
+              Enregistrer
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- Card Sécurité -->
+      <div class="profil-card security-card">
+        <div class="card-header">
+          <h3>
+            <i class="bi bi-shield-lock"></i>
+            Sécurité
+          </h3>
+        </div>
+
+        <div class="security-content">
+          <div class="security-item">
+            <div>
+              <h4>Mot de passe</h4>
+              <p class="text-muted">Dernière modification : Non disponible</p>
+            </div>
+            <button class="btn btn-outline-primary" (click)="openPasswordModal()">
+              <i class="bi bi-key"></i>
+              Changer le mot de passe
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="loading-state">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Chargement...</span>
+      </div>
+      <p>Chargement du profil...</p>
+    </div>
+  }
+</div>
+
+<!-- ✅✅✅ MODAL ULTRA SIMPLIFIÉ ✅✅✅ -->
+@if (showPasswordModal) {
+  <!-- Backdrop cliquable -->
+  <div class="modal-backdrop-custom show" (click)="forceCloseModal()"></div>
+  
+  <!-- Modal content -->
+  <div class="modal-custom">
+    <div class="modal-dialog-custom">
+      <div class="modal-content-custom">
+        
+        <!-- Header avec gros bouton fermeture -->
+        <div class="modal-header-custom">
+          <h5 class="modal-title-custom">
+            <i class="bi bi-key me-2"></i>
+            Changer le mot de passe
+          </h5>
+          <button type="button" class="btn-close-custom" (click)="forceCloseModal()">
+            ✕
+          </button>
+        </div>
+        
+        <!-- Body -->
+        <div class="modal-body-custom">
+          @if (passwordSuccessMessage) {
+            <div class="alert alert-success">
+              {{ passwordSuccessMessage }}
+            </div>
+          }
+
+          @if (passwordErrorMessage) {
+            <div class="alert alert-danger">
+              {{ passwordErrorMessage }}
+            </div>
+          }
+
+          <div class="mb-3">
+            <label class="form-label">Mot de passe actuel</label>
+            <input 
+              type="password" 
+              class="form-control" 
+              [(ngModel)]="currentPassword"
+              placeholder="Votre mot de passe actuel">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Nouveau mot de passe</label>
+            <input 
+              type="password" 
+              class="form-control" 
+              [(ngModel)]="newPassword"
+              placeholder="Au moins 6 caractères">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Confirmer le nouveau mot de passe</label>
+            <input 
+              type="password" 
+              class="form-control" 
+              [(ngModel)]="confirmPassword"
+              placeholder="Confirmer le mot de passe">
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer-custom">
+          <button type="button" class="btn btn-secondary" (click)="forceCloseModal()">
+            Annuler
+          </button>
+          <button type="button" class="btn btn-primary" (click)="changePassword()">
+            <i class="bi bi-check-circle me-2"></i>
+            Changer le mot de passe
+          </button>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+}

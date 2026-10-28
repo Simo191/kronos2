@@ -1,0 +1,405 @@
+// ─── Charte du projet (identique à Collaborateurs / Contrats) ───────────────
+.suivi-page {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.card {
+  border-radius: 16px;
+  border: none;
+  overflow: hidden;
+  background: white;
+
+  &.shadow-sm { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important; }
+}
+
+.bg-light { background-color: #f8f9fa !important; }
+
+.input-group {
+  .input-group-text {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-right: 0;
+    border-radius: 10px 0 0 10px;
+    padding: 0.625rem 1rem;
+  }
+  .form-control {
+    border-left: 0;
+    border-radius: 0 10px 10px 0;
+    padding: 0.625rem 1rem;
+    &:focus { border-color: #e0e0e0; box-shadow: none; }
+  }
+}
+
+.form-control,
+.form-select {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 0.625rem 1rem;
+  font-size: 0.9375rem;
+  transition: all 0.2s ease;
+
+  &:focus {
+    border-color: #1e88e5;
+    box-shadow: 0 0 0 0.15rem rgba(30, 136, 229, 0.15);
+    outline: none;
+  }
+}
+
+.form-select {
+  padding-right: 2.5rem;
+  &.form-select-sm { padding: 0.3rem 2rem 0.3rem 0.6rem; font-size: 0.8rem; border-radius: 8px; }
+}
+
+.form-check-input:checked {
+  background-color: #A259FF;
+  border-color: #A259FF;
+}
+.form-check-input:focus { box-shadow: 0 0 0 0.15rem rgba(162, 89, 255, 0.2); }
+
+.btn {
+  border-radius: 10px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.9375rem;
+
+  &:active,
+  &:focus { box-shadow: none !important; }
+}
+
+.btn-sm { padding: 0.375rem 0.75rem; border-radius: 8px; }
+
+.btn-group {
+  .btn-outline-secondary {
+    border-color: #e0e0e0;
+    color: #616161;
+
+    &:hover { background-color: #f5f5f5; border-color: #d0d0d0; color: #424242; }
+
+    &.active {
+      background-color: #A259FF;
+      border-color: #A259FF;
+      color: white;
+    }
+  }
+}
+
+.btn-outline-secondary {
+  border-color: #e0e0e0;
+  color: #616161;
+  &:hover { background-color: #f5f5f5; border-color: #d0d0d0; color: #424242; }
+}
+
+.btn-success {
+  background-color: #28c76f;
+  border-color: #28c76f;
+  &:hover {
+    background-color: #24b263;
+    border-color: #24b263;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(40, 199, 111, 0.3);
+  }
+}
+
+.text-primary { color: #1e88e5 !important; }
+.text-success { color: #28c76f !important; }
+.text-warning { color: #ffc107 !important; }
+.text-danger { color: #dc3545 !important; }
+.bg-primary-subtle { background-color: rgba(30, 136, 229, 0.1) !important; }
+.bg-success-subtle { background-color: rgba(40, 199, 111, 0.1) !important; }
+.bg-warning-subtle { background-color: rgba(255, 193, 7, 0.1) !important; }
+.bg-danger-subtle { background-color: rgba(220, 53, 69, 0.1) !important; }
+.bg-info-subtle { background-color: rgba(162, 89, 255, 0.1) !important; }
+.text-info { color: #A259FF !important; }
+.progress-bar.bg-success { background-color: #28c76f !important; }
+.progress-bar.bg-warning { background-color: #ffc107 !important; }
+.progress-bar.bg-danger { background-color: #dc3545 !important; }
+
+// ─── Cartes statistiques (même style que Collaborateurs / Contrats) ─────────
+.stat-card {
+  transition: all 0.3s ease;
+  border-radius: 16px;
+  background: white;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  }
+
+  .card-body { padding: 1.25rem; }
+  h3 { font-size: 1.35rem; white-space: nowrap; }
+}
+
+.stat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+// ─── Vue liste ──────────────────────────────────────────────────────────────
+.suivi-table {
+  > thead > tr > th {
+    background-color: #fafafa;
+    border-bottom: 1px solid #e0e0e0;
+    color: #757575;
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+    padding: 0.9rem 1rem;
+    white-space: nowrap;
+  }
+  .th-annee { color: #1e88e5 !important; }
+  .th-conso { min-width: 160px; }
+
+  > tbody > tr > td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.875rem;
+  }
+
+  // Ligne de groupe (logiciel) — cliquable pour replier
+  .groupe-row {
+    cursor: pointer;
+    user-select: none;
+
+    td {
+      background: #f8fafc;
+      border-left: 5px solid #94a3b8;
+      padding: 0.6rem 1rem !important;
+    }
+    &:hover td { filter: brightness(0.97); }
+  }
+  tbody + tbody .groupe-row td { border-top: 8px solid #fff; }
+
+  .ligne { transition: background-color 0.2s ease; }
+  .ligne:hover td { background-color: #fafafa; }
+
+  // Tranche option : fond rosé + montants en rouge (comme le fichier Excel)
+  .ligne-option td { background: #fff7f7; }
+  .ligne-option:hover td { background: #fff0f0; }
+  .ligne-option .cell-annee .montant,
+  .ligne-option .cell-total .montant { color: #dc3545; }
+
+  .ligne-terminee td { color: #94a3b8; }
+  .ligne-terminee .montant { color: #64748b; }
+  .ligne-terminee .suivi-avatar { opacity: 0.6; }
+
+  .cell-commande { min-width: 220px; }
+  .periode { color: #475569; }
+
+  tfoot td { border-top: 2px solid #e2e8f0; white-space: nowrap; padding: 0.75rem 1rem; }
+  tfoot .total-ferme td { background: #f8fafc; }
+  tfoot .total-option td { background: #fff7f7; }
+  tfoot .total-option .montant { color: #dc3545; }
+  tfoot .total-general td { background: #1e293b; color: #fff; }
+  tfoot .total-general .montant { color: #fff; }
+  tfoot .total-general .jours { color: #cbd5e1; }
+}
+
+.montant { font-weight: 700; color: #0f172a; white-space: nowrap; }
+.jours { font-size: 0.72rem; color: #94a3b8; white-space: nowrap; }
+.vide { color: #cbd5e1; }
+
+// ─── Vue cartes ─────────────────────────────────────────────────────────────
+.groupe-section {
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  border-left: 5px solid #94a3b8;
+  background: #f8fafc;
+  cursor: pointer;
+  user-select: none;
+  transition: filter 0.15s;
+
+  &:hover { filter: brightness(0.97); }
+}
+
+.commande-card {
+  border-radius: 14px;
+  border-top: 4px solid #1e88e5 !important;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  }
+
+  &.card-option {
+    border-top-color: #dc3545 !important;
+    background: #fffafa;
+    .montant-principal { color: #dc3545; }
+  }
+
+  &.card-terminee { opacity: 0.75; }
+
+  .infos-commande {
+    font-size: 0.82rem;
+    color: #475569;
+
+    > div {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.2rem;
+    }
+    i { color: #94a3b8; width: 14px; }
+  }
+
+  .montant-principal {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+  }
+
+  .conso-bloc {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 0.6rem 0.75rem;
+  }
+}
+
+.annee-chip {
+  font-size: 0.75rem;
+  background: #e3f2fd;
+  color: #1565c0;
+  border-radius: 8px;
+  padding: 0.2rem 0.55rem;
+  white-space: nowrap;
+
+  strong { color: #1e88e5; margin-right: 2px; }
+}
+.card-option .annee-chip { background: #fdecee; color: #a71d2a; strong { color: #dc3545; } }
+
+.recap-annees {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+
+  .table { background: transparent; font-size: 0.85rem; }
+  th { font-size: 0.72rem; color: #64748b; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
+  tfoot td { border-top: 2px solid #cbd5e1; }
+}
+
+// ─── Éléments communs ───────────────────────────────────────────────────────
+.logiciel-badge {
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+}
+
+.group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 6px;
+  color: #fff;
+  background: #64748b;
+}
+
+.statut-badge { background: #e2e8f0; color: #475569; font-weight: 600; }
+
+.tranche-pill {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+  background: #e3f2fd;
+  color: #1976d2;
+  white-space: nowrap;
+
+  &.tranche-option { background: #fdecee; color: #dc3545; }
+}
+
+.suivi-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: 2px solid #e0e7ff;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+
+  &.suivi-avatar-lg { width: 54px; height: 54px; font-size: 15px; }
+}
+
+.badge-entreprise {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: #f3e8ff;
+  color: #6b21a8;
+  border: 1px solid #d8b4fe;
+  white-space: nowrap;
+}
+
+.commentaire {
+  margin-top: 4px;
+  font-size: 0.76rem;
+  color: #dc3545;
+  font-style: italic;
+}
+
+.lien-confirmer {
+  font-size: 0.76rem;
+  color: #b45309;
+  text-decoration: none;
+  font-weight: 600;
+  &:hover { text-decoration: underline; }
+}
+
+.lien-changer {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  text-decoration: none;
+  &:hover { color: #3b82f6; }
+}
+
+.logiciel-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  color: #475569;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+
+  .pastille { width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+}
+
+@media (max-width: 768px) {
+  .suivi-page { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+  .suivi-page h1 { font-size: 1.15rem; }
+  .stat-card h3 { font-size: 1.1rem; }
+  .suivi-table > tbody > tr > td { font-size: 0.78rem; padding: 0.5rem 0.6rem; }
+}

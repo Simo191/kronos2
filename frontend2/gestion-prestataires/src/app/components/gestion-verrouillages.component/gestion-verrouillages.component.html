@@ -1,0 +1,202 @@
+<div class="container-fluid px-4 py-4">
+  <!-- En-tête -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1">
+        <i class="bi bi-lock-fill me-2 text-warning"></i>Gestion des Verrouillages
+      </h1>
+      <p class="text-muted mb-0">Verrouillez les mois pour empêcher les modifications</p>
+    </div>
+    <button class="btn btn-primary px-4" (click)="openModal()">
+      <i class="bi bi-plus-lg me-2"></i>Verrouiller un mois
+    </button>
+  </div>
+
+<!-- ✅ Système de notifications centralisé -->
+<app-notification-toast></app-notification-toast>
+
+
+  <!-- Tableau des mois verrouillés -->
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      @if (isLoading) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
+          </div>
+          <p class="text-muted mt-3">Chargement des mois verrouillés...</p>
+        </div>
+      } @else if (moisVerrouilles.length === 0) {
+        <div class="text-center py-5">
+          <i class="bi bi-unlock-fill text-muted" style="font-size: 3rem;"></i>
+          <p class="text-muted mt-3">Aucun mois verrouillé</p>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th><i class="bi bi-calendar3 me-2"></i>Mois</th>
+                <th><i class="bi bi-person me-2"></i>Verrouillé par</th>
+                <th><i class="bi bi-clock me-2"></i>Date</th>
+                <th><i class="bi bi-chat-square-text me-2"></i>Commentaire</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (mois of moisVerrouilles; track mois.id) {
+                <tr>
+                  <td>
+                    <span class="badge bg-warning text-dark">
+                      <i class="bi bi-lock-fill me-1"></i>{{ formatMois(mois.mois) }}
+                    </span>
+                  </td>
+                  <td>{{ mois.verrouilleParUserName || 'Inconnu' }}</td>
+                  <td>{{ mois.dateVerrouillage | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>
+                    <small class="text-muted">{{ mois.commentaire || '-' }}</small>
+                  </td>
+                  <td class="text-end">
+                    <button 
+                      class="btn btn-sm btn-outline-danger"
+                      (click)="confirmDeverrouiller(mois)"
+                      title="Déverrouiller">
+                      <i class="bi bi-unlock me-1"></i>Déverrouiller
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VERROUILLER UN MOIS -->
+@if (isModalOpen) {
+  <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-lock-fill me-2 text-warning"></i>Verrouiller un mois
+          </h5>
+          <button type="button" class="btn-close" (click)="closeModal()"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Sélecteur de mois -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              Mois à verrouiller <span class="text-danger">*</span>
+            </label>
+            <div class="position-relative">
+              <input 
+                type="text" 
+                class="form-control"
+                [value]="formatMoisInput(selectedMonth)"
+                (click)="toggleMonthPicker($event)"
+                placeholder="Sélectionner un mois"
+                readonly
+                required>
+              <i class="bi bi-calendar3 position-absolute top-50 end-0 translate-middle-y me-3"></i>
+              
+              <!-- Month Picker -->
+              @if (showMonthPicker) {
+                <div class="custom-month-picker shadow-lg">
+                  <div class="month-picker-header">
+                    <button type="button" class="btn btn-sm btn-link" (click)="changeYear(-1, $event)">
+                      <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <span class="fw-bold">{{ selectedYear }}</span>
+                    <button type="button" class="btn btn-sm btn-link" (click)="changeYear(1, $event)">
+                      <i class="bi bi-chevron-right"></i>
+                    </button>
+                  </div>
+                  <div class="months-grid">
+                    @for (mois of moisList; track mois.value) {
+                      <button
+                        type="button"
+                        class="month-button"
+                        [class.selected]="isMonthSelected(mois.value)"
+                        [class.disabled]="isMoisVerrouille(selectedYear + '-' + mois.value.toString().padStart(2, '0'))"
+                        [disabled]="isMoisVerrouille(selectedYear + '-' + mois.value.toString().padStart(2, '0'))"
+                        (click)="selectMonth(mois.value, $event)">
+                        {{ mois.label }}
+                        @if (isMoisVerrouille(selectedYear + '-' + mois.value.toString().padStart(2, '0'))) {
+                          <i class="bi bi-lock-fill ms-1 text-warning"></i>
+                        }
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Commentaire -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">Commentaire (optionnel)</label>
+            <textarea 
+              class="form-control" 
+              rows="3" 
+              [(ngModel)]="commentaire"
+              placeholder="Ex: Clôture comptable, validation en cours..."></textarea>
+          </div>
+
+          <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>
+              <strong>Attention :</strong> Une fois verrouillé, les utilisateurs (sauf Admin/Manager) ne pourront plus créer, modifier ou supprimer de jours de travail pour ce mois.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModal()">
+            Annuler
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-primary"
+            (click)="verrouiller()"
+            [disabled]="!selectedMonth">
+            <i class="bi bi-lock-fill me-2"></i>Verrouiller
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL CONFIRMATION DÉVERROUILLAGE -->
+@if (showDeleteConfirm && moisToDelete) {
+  <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmation
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="cancelDelete()"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-0">
+            Êtes-vous sûr de vouloir <strong>déverrouiller le mois {{ formatMois(moisToDelete.mois) }}</strong> ?
+          </p>
+          <p class="text-muted mt-2 mb-0">
+            Les utilisateurs pourront à nouveau créer, modifier et supprimer des jours de travail pour ce mois.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="cancelDelete()">
+            Annuler
+          </button>
+          <button type="button" class="btn btn-danger" (click)="deverrouiller()">
+            <i class="bi bi-unlock me-2"></i>Déverrouiller
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
